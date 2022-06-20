@@ -46,7 +46,7 @@ func (c *Client) GetEvent(date string) (*Event, error) {
 
 	event, err := c.Service.Events.List(c.CalendarID).
 		ShowDeleted(false).
-		//SingleEvents(true).
+		SingleEvents(true).
 		TimeMin(dateParsed.Format(time.RFC3339)).
 		TimeMax(dateParsed.Add(24 * time.Hour).Format(time.RFC3339)).
 		MaxResults(10).
@@ -76,7 +76,7 @@ func (c *Client) RemoveAttende(event *calendar.Event, name string, phone string)
 
 	attendesList := getAttendesList(event)
 
-	for index, _ := range attendesList {
+	for index := range attendesList {
 		if attendesList[index].Name == name && attendesList[index].Phone == phone {
 			attendesList = append(attendesList[:index], attendesList[index+1:]...)
 			break
