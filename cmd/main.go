@@ -1,10 +1,10 @@
 package main
 
 import (
-	"fmt"
 	"log"
 
 	"github.com/caarlos0/env"
+	"github.com/stockholmfootvolley/booking/internal/app/rest"
 	"github.com/stockholmfootvolley/booking/internal/pkg/calendar"
 )
 
@@ -20,11 +20,7 @@ func main() {
 	}
 
 	calendarService := calendar.New(cfg.ServiceAccount, cfg.CalendarID)
-	//fmt.Println(calendarService.GetEvents())
 
-	c, _ := calendarService.GetCalendars()
-	fmt.Println(c)
-	for _, d := range c.Items {
-		fmt.Println(d.Description)
-	}
+	restService := rest.New(calendarService)
+	restService.Serve()
 }

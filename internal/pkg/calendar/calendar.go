@@ -3,7 +3,6 @@ package calendar
 import (
 	"context"
 	"log"
-	"time"
 
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/calendar/v3"
@@ -16,7 +15,9 @@ type Client struct {
 }
 
 type API interface {
-	GetEvents() (*calendar.Events, error)
+	GetEvents() ([]*Event, error)
+	GetEvent(date string) (*Event, error)
+	GetCalendars() (*calendar.CalendarList, error)
 }
 
 func New(serviceAccount string, calendarID string) *Client {
@@ -45,15 +46,6 @@ func getClient(serviceAccount string) (*calendar.Service, error) {
 	return srv, err
 }
 
-func (c *Client) GetEvents() (*calendar.Events, error) {
-	return c.Service.Events.List(c.CalendarID).
-		ShowDeleted(false).
-		SingleEvents(true).
-		TimeMin(time.Now().Format(time.RFC3339)).
-		MaxResults(10).
-		OrderBy("startTime").
-		Do()
-}
 func (c *Client) GetCalendars() (*calendar.CalendarList, error) {
 	return c.Service.CalendarList.List().Do()
 }
