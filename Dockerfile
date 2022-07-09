@@ -15,6 +15,7 @@ RUN go mod download
 
 WORKDIR /usr/local/go/src/
 COPY . .
+RUN go mod vendor
 RUN make build
 
 FROM alpine:latest
