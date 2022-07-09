@@ -31,7 +31,7 @@ func (c *Client) GetEvents() ([]*Event, error) {
 		return nil, err
 	}
 
-	var retEvents []*Event
+	retEvents := []*Event{}
 	for _, ev := range events.Items {
 		retEvents = append(retEvents, GoogleEventToEvent(ev))
 	}
