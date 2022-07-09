@@ -4,8 +4,8 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	"github.com/rs/cors"
 	"github.com/stockholmfootvolley/booking/internal/pkg/calendar"
 )
 
