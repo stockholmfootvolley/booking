@@ -26,4 +26,7 @@ RUN chown -R stockholmfootvolley:stockholmfootvolley /home/stockholmfootvolley
 USER 1890
 WORKDIR /home/stockholmfootvolley
 
+ARG PORT 
+EXPOSE $PORT 
+
 ENV PATH="/home/stockholmfootvolley/bin:${PATH}"

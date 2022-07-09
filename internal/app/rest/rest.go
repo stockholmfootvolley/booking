@@ -15,15 +15,17 @@ var (
 
 type Server struct {
 	calendarService calendar.API
+	port            string
 }
 
 type API interface {
 	Serve()
 }
 
-func New(calendarService calendar.API) API {
+func New(calendarService calendar.API, port string) API {
 	return &Server{
 		calendarService: calendarService,
+		port:            port,
 	}
 }
 
@@ -56,5 +58,5 @@ func (s *Server) Serve() {
 	router.GET("/events", s.getEvents)
 	router.GET("/event/:date", s.getEvent)
 
-	router.Run("0.0.0.0:8080")
+	router.Run("0.0.0.0:" + s.port)
 }

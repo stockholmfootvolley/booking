@@ -11,6 +11,7 @@ import (
 type config struct {
 	ServiceAccount string `env:"SERVICE_ACCOUNT"`
 	CalendarID     string `env:"CALENDAR_ID"`
+	Port           string `env:"PORT"`
 }
 
 func main() {
@@ -21,6 +22,6 @@ func main() {
 
 	calendarService := calendar.New(cfg.ServiceAccount, cfg.CalendarID)
 
-	restService := rest.New(calendarService)
+	restService := rest.New(calendarService, cfg.Port)
 	restService.Serve()
 }
