@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rs/cors"
 	"github.com/stockholmfootvolley/booking/internal/pkg/calendar"
 )
 
@@ -55,8 +56,8 @@ func (s *Server) getEvent(c *gin.Context) {
 
 func (s *Server) Serve() {
 	router := gin.Default()
+	router.Use(cors.Default())
 	router.GET("/events", s.getEvents)
 	router.GET("/event/:date", s.getEvent)
-
 	router.Run("0.0.0.0:" + s.port)
 }
