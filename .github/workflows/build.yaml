@@ -40,7 +40,8 @@ jobs:
         run: gcloud auth configure-docker --quiet
 
       - name: Build image
-        run: make build
+        run: |
+          make docker
       
       - name: "Push to GCR"
         run: |
