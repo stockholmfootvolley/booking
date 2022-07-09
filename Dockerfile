@@ -28,5 +28,7 @@ WORKDIR /home/stockholmfootvolley
 
 ARG PORT 
 EXPOSE $PORT 
+ENV GIN_MODE=release
 
 ENV PATH="/home/stockholmfootvolley/bin:${PATH}"
+CMD ["bin/booking"]
