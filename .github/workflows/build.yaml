@@ -44,8 +44,8 @@ jobs:
       
       - name: "Push to GCR"
         run: |
-        docker tag booking:${GITHUB_SHA::7} $IMAGE_NAME:${GITHUB_SHA::7}
-        docker push ${IMAGE_NAME}:${GITHUB_SHA::7}
+          docker tag booking:${GITHUB_SHA::7} $IMAGE_NAME:${GITHUB_SHA::7}
+          docker push ${IMAGE_NAME}:${GITHUB_SHA::7}
 
-        docker tag ${IMAGE_NAME}:${GITHUB_SHA::7} ${IMAGE_NAME}:latest
-        docker push ${IMAGE_NAME}:latest
+          docker tag ${IMAGE_NAME}:${GITHUB_SHA::7} ${IMAGE_NAME}:latest
+          docker push ${IMAGE_NAME}:latest
