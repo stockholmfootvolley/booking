@@ -47,7 +47,9 @@ func GoogleEventToEvent(gEvent *calendar.Event) (*Event, error) {
 }
 
 func readDescription(description string) (*Description, error) {
-	descObj := &Description{}
+	descObj := &Description{
+		Attendees: []Attendee{},
+	}
 	err := yaml.Unmarshal([]byte(description), descObj)
 	if err != nil {
 		return nil, err
