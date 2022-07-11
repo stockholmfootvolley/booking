@@ -13,8 +13,8 @@ const (
 )
 
 type Attendee struct {
-	Name  string
-	Phone string
+	Name  string `json:"name"`
+	Phone string `json:"phone"`
 }
 
 type Description struct {
