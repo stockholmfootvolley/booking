@@ -19,3 +19,4 @@ bin/booking
 .env
 
 .vscode
+.DS_Store
