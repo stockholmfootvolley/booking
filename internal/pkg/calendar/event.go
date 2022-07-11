@@ -1,21 +1,66 @@
 package calendar
 
 import (
-	"fmt"
-	"strings"
 	"time"
 
+	"go.uber.org/zap"
 	"google.golang.org/api/calendar/v3"
+	"gopkg.in/yaml.v2"
 )
 
 const (
 	DateLayout = "2006-01-02"
 )
 
-type Attendees []Attendee
 type Attendee struct {
 	Name  string
 	Phone string
+}
+
+type Description struct {
+	Price     int        `yaml:"price"`
+	Attendees []Attendee `yaml:"attendes"`
+}
+type Event struct {
+	ID        string     `json:"id"`
+	Price     int        `json:"price"`
+	Name      string     `json:"name"`
+	Date      time.Time  `json:"date"`
+	Attendees []Attendee `json:"attendees"`
+	Local     string     `json:"local"`
+}
+
+func GoogleEventToEvent(gEvent *calendar.Event) (*Event, error) {
+	description, err := readDescription(gEvent.Description)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Event{
+		ID:        TimeToID(gEvent.Start.DateTime),
+		Date:      TimeParse(gEvent.Start.DateTime),
+		Name:      gEvent.Summary,
+		Attendees: description.Attendees,
+		Price:     description.Price,
+		Local:     gEvent.Location,
+	}, nil
+}
+
+func readDescription(description string) (*Description, error) {
+	descObj := &Description{}
+	err := yaml.Unmarshal([]byte(description), descObj)
+	if err != nil {
+		return nil, err
+	}
+	return descObj, nil
+}
+
+func (d *Description) String() string {
+	content, err := yaml.Marshal(d)
+	if err != nil {
+		return ""
+	}
+	return string(content)
 }
 
 func (c *Client) GetEvents() ([]*Event, error) {
@@ -33,12 +78,16 @@ func (c *Client) GetEvents() ([]*Event, error) {
 
 	retEvents := []*Event{}
 	for _, ev := range events.Items {
-		retEvents = append(retEvents, GoogleEventToEvent(ev))
+		e, err := GoogleEventToEvent(ev)
+		if err != nil {
+			return nil, err
+		}
+		retEvents = append(retEvents, e)
 	}
 	return retEvents, nil
 }
 
-func (c *Client) GetEvent(date string) (*Event, error) {
+func (c *Client) GetEvent(date string) (*calendar.Event, error) {
 	dateParsed, err := time.Parse(DateLayout, date)
 	if err != nil {
 		return nil, err
@@ -54,61 +103,40 @@ func (c *Client) GetEvent(date string) (*Event, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	for _, e := range event.Items {
-		return GoogleEventToEvent(e), nil
+		return e, nil
 	}
+
 	return nil, err
 }
 
-func (c *Client) AddAttendee(event *calendar.Event, name string, phone string) error {
-
-	attendesList := getAttendesList(event)
-	attendesList = append(attendesList, Attendee{
-		Name:  name,
-		Phone: phone,
-	})
-	event.Description = attendesList.String()
-	_, err := c.Service.Events.Update(c.CalendarID, event.Id, event).Do()
-	return err
-}
-
-func (c *Client) RemoveAttende(event *calendar.Event, name string, phone string) error {
-
-	attendesList := getAttendesList(event)
-
-	for index := range attendesList {
-		if attendesList[index].Name == name && attendesList[index].Phone == phone {
-			attendesList = append(attendesList[:index], attendesList[index+1:]...)
-			break
-		}
+func (c *Client) UpdateEvent(eventDate string, newAttende *Attendee) (*Event, error) {
+	oldEvent, err := c.GetEvent(eventDate)
+	if err != nil {
+		return nil, err
 	}
 
-	event.Description = attendesList.String()
-	_, err := c.Service.Events.Update(c.CalendarID, event.Id, event).Do()
-	return err
-}
+	c.Logger.Info("updating event",
+		zap.Any("event", oldEvent),
+		zap.Any("attendes", newAttende),
+	)
 
-func getAttendesList(event *calendar.Event) Attendees {
-	attendes := []Attendee{}
-	if event.Description == "" {
-		return attendes
+	description, err := readDescription(oldEvent.Description)
+	if err != nil {
+		return nil, err
 	}
 
-	attendesString := strings.Split(event.Description, "\n")
-	for _, attende := range attendesString {
-		attendeProps := strings.Split(attende, "-")
-		attendes = append(attendes, Attendee{
-			Name:  attendeProps[0],
-			Phone: attendeProps[1],
-		})
+	if newAttende != nil {
+		description.Attendees = append(description.Attendees, *newAttende)
 	}
-	return attendes
-}
 
-func (a Attendees) String() string {
-	var attendesList string
-	for _, b := range a {
-		attendesList += fmt.Sprintln(b.Name, "-", b.Phone)
+	oldEvent.Description = description.String()
+	newEvent, err := c.Service.Events.Update(c.CalendarID, oldEvent.Id, oldEvent).
+		Do()
+	if err != nil {
+		c.Logger.Error("failed to update event", zap.Error(err))
+		return nil, err
 	}
-	return attendesList
+	return GoogleEventToEvent(newEvent)
 }

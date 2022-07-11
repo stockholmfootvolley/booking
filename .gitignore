@@ -17,3 +17,5 @@ bin/booking
 
 # skip env file
 .env
+
+.vscode

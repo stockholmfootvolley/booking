@@ -1,12 +1,14 @@
 package rest
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/stockholmfootvolley/booking/internal/pkg/calendar"
+	"go.uber.org/zap"
 )
 
 var (
@@ -17,16 +19,22 @@ var (
 type Server struct {
 	calendarService calendar.API
 	port            string
+	logger          *zap.Logger
+}
+
+type NewAttendee struct {
+	NewAttendee calendar.Attendee `json:"new_attendee"`
 }
 
 type API interface {
 	Serve()
 }
 
-func New(calendarService calendar.API, port string) API {
+func New(calendarService calendar.API, port string, logger *zap.Logger) API {
 	return &Server{
 		calendarService: calendarService,
 		port:            port,
+		logger:          logger,
 	}
 }
 
@@ -51,7 +59,37 @@ func (s *Server) getEvent(c *gin.Context) {
 		return
 	}
 
-	c.IndentedJSON(http.StatusOK, event)
+	newEvent, err := calendar.GoogleEventToEvent(event)
+	if err != nil {
+		c.AbortWithError(
+			http.StatusInternalServerError,
+			errors.New("could not convert event "+eventDate))
+		return
+	}
+	c.IndentedJSON(http.StatusOK, newEvent)
+}
+
+func (s *Server) updateEvent(c *gin.Context) {
+	eventDate := c.Param("date")
+
+	var newAttende NewAttendee
+
+	err := json.NewDecoder(c.Request.Body).Decode(&newAttende)
+	if err != nil {
+		c.AbortWithError(
+			http.StatusBadRequest,
+			errors.New("no attendee passed"))
+		return
+	}
+
+	newEvent, err := s.calendarService.UpdateEvent(eventDate, &newAttende.NewAttendee)
+	if err != nil {
+		c.AbortWithError(
+			http.StatusInternalServerError,
+			errors.New("could not convert event "+eventDate))
+		return
+	}
+	c.IndentedJSON(http.StatusOK, newEvent)
 }
 
 func (s *Server) Serve() {
@@ -59,5 +97,6 @@ func (s *Server) Serve() {
 	router.Use(cors.Default())
 	router.GET("/events", s.getEvents)
 	router.GET("/event/:date", s.getEvent)
+	router.POST("/event/:date", s.updateEvent)
 	router.Run("0.0.0.0:" + s.port)
 }
