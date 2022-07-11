@@ -22,10 +22,6 @@ type Server struct {
 	logger          *zap.Logger
 }
 
-type NewAttendee struct {
-	NewAttendee calendar.Attendee `json:"new_attendee"`
-}
-
 type API interface {
 	Serve()
 }
@@ -72,9 +68,9 @@ func (s *Server) getEvent(c *gin.Context) {
 func (s *Server) updateEvent(c *gin.Context) {
 	eventDate := c.Param("date")
 
-	var newAttende NewAttendee
+	var attende calendar.Attendee
 
-	err := json.NewDecoder(c.Request.Body).Decode(&newAttende)
+	err := json.NewDecoder(c.Request.Body).Decode(&attende)
 	if err != nil {
 		c.AbortWithError(
 			http.StatusBadRequest,
@@ -82,7 +78,7 @@ func (s *Server) updateEvent(c *gin.Context) {
 		return
 	}
 
-	newEvent, err := s.calendarService.UpdateEvent(eventDate, &newAttende.NewAttendee)
+	newEvent, err := s.calendarService.UpdateEvent(eventDate, &attende)
 	if err != nil {
 		c.AbortWithError(
 			http.StatusInternalServerError,
