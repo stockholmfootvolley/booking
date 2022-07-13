@@ -90,7 +90,11 @@ func (s *Server) updateEvent(c *gin.Context) {
 
 func (s *Server) Serve() {
 	router := gin.Default()
-	router.Use(cors.Default())
+	config := cors.DefaultConfig()
+	config.AllowAllOrigins = true
+	config.AllowCredentials = true
+	config.AddAllowHeaders("authorization")
+	router.Use(cors.New(config))
 	router.GET("/events", s.getEvents)
 	router.GET("/event/:date", s.getEvent)
 	router.POST("/event/:date", s.updateEvent)
