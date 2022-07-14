@@ -138,6 +138,12 @@ func (c *Client) AddAttendeeEvent(eventDate string, newAttende *Attendee) (*Even
 		zap.Any("attendes", newAttende),
 	)
 
+	for index, _ := range description.Attendees {
+		if description.Attendees[index].Name == newAttende.Name && description.Attendees[index].Email == newAttende.Email {
+			return GoogleEventToEvent(oldEvent)
+		}
+	}
+
 	if newAttende != nil {
 		description.Attendees = append(description.Attendees, *newAttende)
 	}
@@ -163,9 +169,10 @@ func (c *Client) RemoveAttendee(eventDate string, removeAttendee *Attendee) (*Ev
 		zap.Any("attendes", removeAttendee),
 	)
 
-	for index, _ := range description.Attendees {
+	for index := range description.Attendees {
 		if description.Attendees[index].Name == removeAttendee.Name && description.Attendees[index].Email == removeAttendee.Email {
 			description.Attendees = append(description.Attendees[:index], description.Attendees[index+1:]...)
+			break
 		}
 	}
 
