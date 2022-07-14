@@ -1,14 +1,15 @@
 package rest
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/stockholmfootvolley/booking/internal/pkg/calendar"
 	"go.uber.org/zap"
+	"google.golang.org/api/idtoken"
 )
 
 var (
@@ -20,16 +21,18 @@ type Server struct {
 	calendarService calendar.API
 	port            string
 	logger          *zap.Logger
+	clientID        string
 }
 
 type API interface {
 	Serve()
 }
 
-func New(calendarService calendar.API, port string, logger *zap.Logger) API {
+func New(calendarService calendar.API, port string, clientID string, logger *zap.Logger) API {
 	return &Server{
 		calendarService: calendarService,
 		port:            port,
+		clientID:        clientID,
 		logger:          logger,
 	}
 }
@@ -65,20 +68,37 @@ func (s *Server) getEvent(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, newEvent)
 }
 
-func (s *Server) updateEvent(c *gin.Context) {
+func (s *Server) addPresence(c *gin.Context) {
 	eventDate := c.Param("date")
 
-	var attende calendar.Attendee
+	t, _ := c.Get("token")
+	token := t.(*idtoken.Payload)
 
-	err := json.NewDecoder(c.Request.Body).Decode(&attende)
+	newEvent, err := s.calendarService.AddAttendeeEvent(eventDate, &calendar.Attendee{
+		Name:  token.Claims["name"].(string),
+		Email: token.Claims["email"].(string),
+	})
+
 	if err != nil {
 		c.AbortWithError(
-			http.StatusBadRequest,
-			errors.New("no attendee passed"))
+			http.StatusInternalServerError,
+			errors.New("could not convert event "+eventDate))
 		return
 	}
+	c.IndentedJSON(http.StatusOK, newEvent)
+}
 
-	newEvent, err := s.calendarService.UpdateEvent(eventDate, &attende)
+func (s *Server) removePresence(c *gin.Context) {
+	eventDate := c.Param("date")
+
+	t, _ := c.Get("token")
+	token := t.(*idtoken.Payload)
+
+	newEvent, err := s.calendarService.RemoveAttendee(eventDate, &calendar.Attendee{
+		Name:  token.Claims["name"].(string),
+		Email: token.Claims["email"].(string),
+	})
+
 	if err != nil {
 		c.AbortWithError(
 			http.StatusInternalServerError,
@@ -95,8 +115,35 @@ func (s *Server) Serve() {
 	config.AllowCredentials = true
 	config.AddAllowHeaders("authorization")
 	router.Use(cors.New(config))
+	router.Use(s.addParsedToken())
 	router.GET("/events", s.getEvents)
 	router.GET("/event/:date", s.getEvent)
-	router.POST("/event/:date", s.updateEvent)
+	router.POST("/event/:date", s.addPresence)
+	router.DELETE("/event/:date", s.removePresence)
 	router.Run("0.0.0.0:" + s.port)
+}
+
+func (s *Server) addParsedToken() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if c.Request.Method == http.MethodGet {
+			c.Next()
+		}
+
+		token := c.Request.Header.Get("authorization")
+		if token == "" {
+			c.AbortWithStatus(
+				http.StatusUnauthorized)
+			return
+		}
+
+		token = strings.ReplaceAll(token, "Bearer ", "")
+		payload, err := idtoken.Validate(c.Request.Context(), token, s.clientID)
+		if err != nil {
+			c.AbortWithStatus(
+				http.StatusUnauthorized)
+			return
+		}
+		c.Set("token", payload)
+		c.Next()
+	}
 }

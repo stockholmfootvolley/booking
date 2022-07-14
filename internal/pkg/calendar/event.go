@@ -14,7 +14,7 @@ const (
 
 type Attendee struct {
 	Name  string `json:"name"`
-	Phone string `json:"phone"`
+	Email string `json:"email"`
 }
 
 type Description struct {
@@ -113,8 +113,22 @@ func (c *Client) GetEvent(date string) (*calendar.Event, error) {
 	return nil, err
 }
 
-func (c *Client) UpdateEvent(eventDate string, newAttende *Attendee) (*Event, error) {
+func (c *Client) GetSingleEvent(eventDate string) (*calendar.Event, *Description, error) {
 	oldEvent, err := c.GetEvent(eventDate)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	description, err := readDescription(oldEvent.Description)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return oldEvent, description, nil
+}
+
+func (c *Client) AddAttendeeEvent(eventDate string, newAttende *Attendee) (*Event, error) {
+	oldEvent, description, err := c.GetSingleEvent(eventDate)
 	if err != nil {
 		return nil, err
 	}
@@ -124,13 +138,35 @@ func (c *Client) UpdateEvent(eventDate string, newAttende *Attendee) (*Event, er
 		zap.Any("attendes", newAttende),
 	)
 
-	description, err := readDescription(oldEvent.Description)
+	if newAttende != nil {
+		description.Attendees = append(description.Attendees, *newAttende)
+	}
+
+	oldEvent.Description = description.String()
+	newEvent, err := c.Service.Events.Update(c.CalendarID, oldEvent.Id, oldEvent).
+		Do()
+	if err != nil {
+		c.Logger.Error("failed to update event", zap.Error(err))
+		return nil, err
+	}
+	return GoogleEventToEvent(newEvent)
+}
+
+func (c *Client) RemoveAttendee(eventDate string, removeAttendee *Attendee) (*Event, error) {
+	oldEvent, description, err := c.GetSingleEvent(eventDate)
 	if err != nil {
 		return nil, err
 	}
 
-	if newAttende != nil {
-		description.Attendees = append(description.Attendees, *newAttende)
+	c.Logger.Info("removing attendee",
+		zap.Any("event", oldEvent),
+		zap.Any("attendes", removeAttendee),
+	)
+
+	for index, _ := range description.Attendees {
+		if description.Attendees[index].Name == removeAttendee.Name && description.Attendees[index].Email == removeAttendee.Email {
+			description.Attendees = append(description.Attendees[:index], description.Attendees[index+1:]...)
+		}
 	}
 
 	oldEvent.Description = description.String()

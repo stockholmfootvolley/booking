@@ -13,6 +13,7 @@ import (
 type config struct {
 	ServiceAccount string `env:"SERVICE_ACCOUNT,required"`
 	CalendarID     string `env:"CALENDAR_ID,required"`
+	ClientID       string `env:"CLIENT_ID,required"`
 	Port           string `env:"PORT" envDefault:"8080"`
 }
 
@@ -38,6 +39,6 @@ func main() {
 		log.Fatalf("could not start calendar service")
 	}
 
-	restService := rest.New(calendarService, cfg.Port, logger)
+	restService := rest.New(calendarService, cfg.Port, cfg.ClientID, logger)
 	restService.Serve()
 }

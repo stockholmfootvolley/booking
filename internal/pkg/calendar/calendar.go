@@ -19,7 +19,8 @@ type API interface {
 	GetEvents() ([]*Event, error)
 	GetEvent(date string) (*calendar.Event, error)
 	GetCalendars() (*calendar.CalendarList, error)
-	UpdateEvent(eventDate string, newAttende *Attendee) (*Event, error)
+	AddAttendeeEvent(eventDate string, newAttende *Attendee) (*Event, error)
+	RemoveAttendee(eventDate string, removeAttendee *Attendee) (*Event, error)
 }
 
 func New(serviceAccount string, calendarID string, logger *zap.Logger) (*Client, error) {
