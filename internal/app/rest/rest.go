@@ -2,7 +2,6 @@ package rest
 
 import (
 	"errors"
-	"log"
 	"net/http"
 	"strings"
 
@@ -22,7 +21,6 @@ var (
 type Server struct {
 	calendarService    calendar.API
 	spreadsheetService spreadsheet.API
-	listMembers        []string
 	port               string
 	logger             *zap.Logger
 	clientID           string
@@ -33,15 +31,10 @@ type API interface {
 }
 
 func New(calendarService calendar.API, spreadsheetService spreadsheet.API, port string, clientID string, logger *zap.Logger) API {
-	users, err := spreadsheetService.GetUsers()
-	if err != nil {
-		log.Fatalf("could not retrieve list of users")
-	}
 
 	return &Server{
 		calendarService:    calendarService,
 		spreadsheetService: spreadsheetService,
-		listMembers:        users,
 		port:               port,
 		clientID:           clientID,
 		logger:             logger,
@@ -153,7 +146,13 @@ func (s *Server) addParsedToken() gin.HandlerFunc {
 			return
 		}
 
-		for _, email := range s.listMembers {
+		users, err := s.spreadsheetService.GetUsers()
+		if err != nil {
+			c.AbortWithStatus(http.StatusInternalServerError)
+			return
+		}
+
+		for _, email := range users {
 			if email == getTokenEmail(payload) {
 				c.Set("token", payload)
 				c.Next()
