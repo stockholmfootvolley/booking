@@ -153,7 +153,7 @@ func (s *Server) addParsedToken() gin.HandlerFunc {
 		}
 
 		for _, email := range users {
-			if email == getTokenEmail(payload) {
+			if strings.EqualFold(email, getTokenEmail(payload)) {
 				c.Set("token", payload)
 				c.Next()
 			}
