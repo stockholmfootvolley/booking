@@ -5,9 +5,10 @@ import "time"
 type Level uint64
 
 const (
-	User       string = "user"
-	Token      string = "token"
-	DateLayout string = "2006-01-02"
+	User                   string = "user"
+	Token                  string = "token"
+	DateLayout             string = "2006-01-02"
+	DefaultMaxParticipants int    = 10
 )
 
 const (

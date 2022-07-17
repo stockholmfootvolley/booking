@@ -68,7 +68,7 @@ func (s *Server) getEvent(c *gin.Context) {
 	if err != nil {
 		c.AbortWithError(
 			http.StatusInternalServerError,
-			errors.New("could not convert event "+eventDate))
+			errors.New("getEvent: could not convert event "+eventDate))
 		return
 	}
 	c.IndentedJSON(http.StatusOK, newEvent)
@@ -77,18 +77,12 @@ func (s *Server) getEvent(c *gin.Context) {
 func (s *Server) addPresence(c *gin.Context) {
 	eventDate := c.Param("date")
 
-	t, _ := c.Get(model.Token)
-	token := t.(*idtoken.Payload)
-
-	newEvent, err := s.calendarService.AddAttendeeEvent(c, eventDate, &calendar.Attendee{
-		Name:  getTokenName(token),
-		Email: getTokenEmail(token),
-	})
+	newEvent, err := s.calendarService.AddAttendeeEvent(c, eventDate)
 
 	if err != nil {
 		c.AbortWithError(
 			http.StatusInternalServerError,
-			errors.New("could not convert event "+eventDate))
+			errors.New("addPresence: could not convert event "+eventDate))
 		return
 	}
 	c.IndentedJSON(http.StatusOK, newEvent)
@@ -96,19 +90,12 @@ func (s *Server) addPresence(c *gin.Context) {
 
 func (s *Server) removePresence(c *gin.Context) {
 	eventDate := c.Param("date")
-
-	t, _ := c.Get(model.Token)
-	token := t.(*idtoken.Payload)
-
-	newEvent, err := s.calendarService.RemoveAttendee(c, eventDate, &calendar.Attendee{
-		Name:  getTokenName(token),
-		Email: getTokenEmail(token),
-	})
+	newEvent, err := s.calendarService.RemoveAttendee(c, eventDate)
 
 	if err != nil {
 		c.AbortWithError(
 			http.StatusInternalServerError,
-			errors.New("could not convert event "+eventDate))
+			errors.New("removePresence: could not convert event "+eventDate))
 		return
 	}
 	c.IndentedJSON(http.StatusOK, newEvent)
@@ -155,7 +142,10 @@ func (s *Server) addParsedToken() gin.HandlerFunc {
 		}
 
 		for _, user := range users {
-			if strings.EqualFold(user.Email, getTokenEmail(payload)) {
+			userEmail := getTokenEmail(payload)
+			if strings.EqualFold(user.Email, userEmail) {
+				user.Name = getTokenName(payload)
+				user.Email = userEmail
 				c.Set(model.Token, payload)
 				c.Set(model.User, user)
 				c.Next()

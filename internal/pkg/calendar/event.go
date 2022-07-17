@@ -3,6 +3,7 @@ package calendar
 import (
 	"context"
 	"errors"
+	"sort"
 	"time"
 
 	"github.com/stockholmfootvolley/booking/internal/pkg/model"
@@ -13,23 +14,26 @@ import (
 )
 
 type Attendee struct {
-	Name  string `json:"name"`
-	Email string `json:"email"`
+	Name     string    `json:"name"`
+	Email    string    `json:"email"`
+	SignTime time.Time `json:"sign_time"`
 }
 
 type Description struct {
-	Price     int        `yaml:"price"`
-	Attendees []Attendee `yaml:"attendes"`
-	Level     string     `yaml:"level"`
+	Price           int        `yaml:"price"`
+	Attendees       []Attendee `yaml:"attendes"`
+	Level           string     `yaml:"level"`
+	MaxParticipants int        `json:"participants"`
 }
 type Event struct {
-	ID        string     `json:"id"`
-	Price     int        `json:"price"`
-	Name      string     `json:"name"`
-	Date      time.Time  `json:"date"`
-	Attendees []Attendee `json:"attendees"`
-	Local     string     `json:"local"`
-	Level     string     `json:"level"`
+	ID              string     `json:"id"`
+	Price           int        `json:"price"`
+	Name            string     `json:"name"`
+	Date            time.Time  `json:"date"`
+	Attendees       []Attendee `json:"attendees"`
+	Local           string     `json:"local"`
+	Level           string     `json:"level"`
+	MaxParticipants int        `json:"max_participants"`
 }
 
 func GoogleEventToEvent(gEvent *calendar.Event) (*Event, error) {
@@ -40,14 +44,20 @@ func GoogleEventToEvent(gEvent *calendar.Event) (*Event, error) {
 
 	level := model.StringToLevel(description.Level)
 
+	maxParticipants := description.MaxParticipants
+	if maxParticipants == 0 {
+		maxParticipants = model.DefaultMaxParticipants
+	}
+
 	return &Event{
-		ID:        model.TimeToID(gEvent.Start.DateTime),
-		Date:      model.TimeParse(gEvent.Start.DateTime),
-		Name:      gEvent.Summary,
-		Attendees: description.Attendees,
-		Price:     description.Price,
-		Local:     gEvent.Location,
-		Level:     level.String(),
+		ID:              model.TimeToID(gEvent.Start.DateTime),
+		Date:            model.TimeParse(gEvent.Start.DateTime),
+		Name:            gEvent.Summary,
+		Attendees:       description.Attendees,
+		Price:           description.Price,
+		Local:           gEvent.Location,
+		Level:           level.String(),
+		MaxParticipants: maxParticipants,
 	}, nil
 }
 
@@ -59,6 +69,11 @@ func readDescription(description string) (*Description, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	sort.Slice(descObj.Attendees, func(i, j int) bool {
+		return descObj.Attendees[i].SignTime.After(descObj.Attendees[j].SignTime)
+	})
+
 	return descObj, nil
 }
 
@@ -146,7 +161,7 @@ func (c *Client) GetSingleEvent(ctx context.Context, eventDate string) (*calenda
 	return oldEvent, description, nil
 }
 
-func (c *Client) AddAttendeeEvent(ctx context.Context, eventDate string, newAttende *Attendee) (*Event, error) {
+func (c *Client) AddAttendeeEvent(ctx context.Context, eventDate string) (*Event, error) {
 	oldEvent, description, err := c.GetSingleEvent(ctx, eventDate)
 	if err != nil {
 		return nil, err
@@ -159,18 +174,19 @@ func (c *Client) AddAttendeeEvent(ctx context.Context, eventDate string, newAtte
 
 	c.Logger.Info("updating event",
 		zap.Any("event", oldEvent),
-		zap.Any("attendes", newAttende),
+		zap.Any("attendes", userInfo),
 	)
 
 	for index := range description.Attendees {
-		if description.Attendees[index].Name == newAttende.Name && description.Attendees[index].Email == newAttende.Email {
+		if description.Attendees[index].Name == userInfo.Name && description.Attendees[index].Email == userInfo.Email {
 			return GoogleEventToEvent(oldEvent)
 		}
 	}
-
-	if newAttende != nil {
-		description.Attendees = append(description.Attendees, *newAttende)
-	}
+	description.Attendees = append(description.Attendees, Attendee{
+		Name:     userInfo.Name,
+		Email:    userInfo.Email,
+		SignTime: time.Now(),
+	})
 
 	oldEvent.Description = description.String()
 	newEvent, err := c.Service.Events.Update(c.CalendarID, oldEvent.Id, oldEvent).
@@ -182,24 +198,24 @@ func (c *Client) AddAttendeeEvent(ctx context.Context, eventDate string, newAtte
 	return GoogleEventToEvent(newEvent)
 }
 
-func (c *Client) RemoveAttendee(ctx context.Context, eventDate string, removeAttendee *Attendee) (*Event, error) {
+func (c *Client) RemoveAttendee(ctx context.Context, eventDate string) (*Event, error) {
 	oldEvent, description, err := c.GetSingleEvent(ctx, eventDate)
 	if err != nil {
 		return nil, err
 	}
+	userInfo := ctx.Value(model.User).(spreadsheet.User)
 
 	c.Logger.Info("removing attendee",
 		zap.Any("event", oldEvent),
-		zap.Any("attendes", removeAttendee),
+		zap.Any("attendes", userInfo),
 	)
 
-	userInfo := ctx.Value(model.User).(spreadsheet.User)
 	if userInfo.Level < model.StringToLevel(description.Level) {
 		return nil, errors.New("user has no compatible level")
 	}
 
 	for index := range description.Attendees {
-		if description.Attendees[index].Name == removeAttendee.Name && description.Attendees[index].Email == removeAttendee.Email {
+		if description.Attendees[index].Name == userInfo.Name && description.Attendees[index].Email == userInfo.Email {
 			description.Attendees = append(description.Attendees[:index], description.Attendees[index+1:]...)
 			break
 		}
