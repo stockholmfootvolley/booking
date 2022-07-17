@@ -54,4 +54,4 @@ jobs:
       
       - name: 'Deploy to Cloud Run'
         run: |
-          gcloud run deploy booking --image ${IMAGE_NAME}:latest
+          gcloud run deploy booking --image ${IMAGE_NAME}:latest --region=europe-north1
