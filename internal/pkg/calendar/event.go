@@ -12,10 +12,6 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-const (
-	DateLayout = "2006-01-02"
-)
-
 type Attendee struct {
 	Name  string `json:"name"`
 	Email string `json:"email"`
@@ -45,8 +41,8 @@ func GoogleEventToEvent(gEvent *calendar.Event) (*Event, error) {
 	level := model.StringToLevel(description.Level)
 
 	return &Event{
-		ID:        TimeToID(gEvent.Start.DateTime),
-		Date:      TimeParse(gEvent.Start.DateTime),
+		ID:        model.TimeToID(gEvent.Start.DateTime),
+		Date:      model.TimeParse(gEvent.Start.DateTime),
 		Name:      gEvent.Summary,
 		Attendees: description.Attendees,
 		Price:     description.Price,
@@ -108,7 +104,7 @@ func (c *Client) GetEvents(ctx context.Context) ([]*Event, error) {
 }
 
 func (c *Client) GetEvent(ctx context.Context, date string) (*calendar.Event, error) {
-	dateParsed, err := time.Parse(DateLayout, date)
+	dateParsed, err := time.Parse(model.DateLayout, date)
 	if err != nil {
 		return nil, err
 	}

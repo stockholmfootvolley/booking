@@ -1,10 +1,13 @@
 package model
 
+import "time"
+
 type Level uint64
 
 const (
-	User  string = "user"
-	Token string = "token"
+	User       string = "user"
+	Token      string = "token"
+	DateLayout string = "2006-01-02"
 )
 
 const (
@@ -37,4 +40,13 @@ func StringToLevel(s string) Level {
 	default:
 		return Beginner
 	}
+}
+
+func TimeToID(date string) string {
+	return TimeParse(date).Format("2006-01-02")
+}
+
+func TimeParse(date string) time.Time {
+	t, _ := time.Parse(time.RFC3339, date)
+	return t
 }
