@@ -52,8 +52,8 @@ jobs:
           docker tag ${IMAGE_NAME}:${GITHUB_SHA::7} ${IMAGE_NAME}:latest
           docker push ${IMAGE_NAME}:latest
       
-    - name: 'Deploy to Cloud Run'
-      uses: 'google-github-actions/deploy-cloudrun@v0'
-      with:
-        image: ${IMAGE_NAME}:latest
-        service: 'booking'
+      - name: 'Deploy to Cloud Run'
+        uses: 'google-github-actions/deploy-cloudrun@v0'
+        with:
+          image: ${IMAGE_NAME}:latest
+          service: 'booking'
