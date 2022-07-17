@@ -8,7 +8,9 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/stockholmfootvolley/booking/internal/pkg/calendar"
+	"github.com/stockholmfootvolley/booking/internal/pkg/model"
 	"github.com/stockholmfootvolley/booking/internal/pkg/spreadsheet"
+
 	"go.uber.org/zap"
 	"google.golang.org/api/idtoken"
 )
@@ -42,7 +44,7 @@ func New(calendarService calendar.API, spreadsheetService spreadsheet.API, port 
 }
 
 func (s *Server) getEvents(c *gin.Context) {
-	events, err := s.calendarService.GetEvents()
+	events, err := s.calendarService.GetEvents(c)
 
 	if err != nil {
 		c.AbortWithError(http.StatusInternalServerError, ErrGetEvents)
@@ -54,7 +56,7 @@ func (s *Server) getEvents(c *gin.Context) {
 
 func (s *Server) getEvent(c *gin.Context) {
 	eventDate := c.Param("date")
-	event, err := s.calendarService.GetEvent(eventDate)
+	event, err := s.calendarService.GetEvent(c, eventDate)
 	if err != nil {
 		c.AbortWithError(
 			http.StatusInternalServerError,
@@ -75,10 +77,10 @@ func (s *Server) getEvent(c *gin.Context) {
 func (s *Server) addPresence(c *gin.Context) {
 	eventDate := c.Param("date")
 
-	t, _ := c.Get("token")
+	t, _ := c.Get(model.Token)
 	token := t.(*idtoken.Payload)
 
-	newEvent, err := s.calendarService.AddAttendeeEvent(eventDate, &calendar.Attendee{
+	newEvent, err := s.calendarService.AddAttendeeEvent(c, eventDate, &calendar.Attendee{
 		Name:  getTokenName(token),
 		Email: getTokenEmail(token),
 	})
@@ -95,10 +97,10 @@ func (s *Server) addPresence(c *gin.Context) {
 func (s *Server) removePresence(c *gin.Context) {
 	eventDate := c.Param("date")
 
-	t, _ := c.Get("token")
+	t, _ := c.Get(model.Token)
 	token := t.(*idtoken.Payload)
 
-	newEvent, err := s.calendarService.RemoveAttendee(eventDate, &calendar.Attendee{
+	newEvent, err := s.calendarService.RemoveAttendee(c, eventDate, &calendar.Attendee{
 		Name:  getTokenName(token),
 		Email: getTokenEmail(token),
 	})
@@ -140,7 +142,7 @@ func (s *Server) addParsedToken() gin.HandlerFunc {
 		}
 
 		token = strings.ReplaceAll(token, "Bearer ", "")
-		payload, err := idtoken.Validate(c.Request.Context(), token, s.clientID)
+		payload, err := idtoken.Validate(c, token, s.clientID)
 		if err != nil {
 			c.AbortWithStatus(http.StatusUnauthorized)
 			return
@@ -152,10 +154,12 @@ func (s *Server) addParsedToken() gin.HandlerFunc {
 			return
 		}
 
-		for _, email := range users {
-			if strings.EqualFold(email, getTokenEmail(payload)) {
-				c.Set("token", payload)
+		for _, user := range users {
+			if strings.EqualFold(user.Email, getTokenEmail(payload)) {
+				c.Set(model.Token, payload)
+				c.Set(model.User, user)
 				c.Next()
+				return
 			}
 		}
 

@@ -4,8 +4,10 @@ go 1.18
 
 require (
 	github.com/caarlos0/env v3.5.0+incompatible
+	go.uber.org/zap v1.21.0
 	golang.org/x/oauth2 v0.0.0-20220622183110-fd043fe589d2
 	google.golang.org/api v0.87.0
+	gopkg.in/yaml.v2 v2.4.0
 )
 
 require (
@@ -24,9 +26,7 @@ require (
 	github.com/ugorji/go/codec v1.2.7 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
-	go.uber.org/zap v1.21.0 // indirect
 	golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97 // indirect
-	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
 
 require (

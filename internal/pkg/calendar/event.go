@@ -1,8 +1,12 @@
 package calendar
 
 import (
+	"context"
+	"errors"
 	"time"
 
+	"github.com/stockholmfootvolley/booking/internal/pkg/model"
+	"github.com/stockholmfootvolley/booking/internal/pkg/spreadsheet"
 	"go.uber.org/zap"
 	"google.golang.org/api/calendar/v3"
 	"gopkg.in/yaml.v2"
@@ -20,6 +24,7 @@ type Attendee struct {
 type Description struct {
 	Price     int        `yaml:"price"`
 	Attendees []Attendee `yaml:"attendes"`
+	Level     string     `yaml:"level"`
 }
 type Event struct {
 	ID        string     `json:"id"`
@@ -28,6 +33,7 @@ type Event struct {
 	Date      time.Time  `json:"date"`
 	Attendees []Attendee `json:"attendees"`
 	Local     string     `json:"local"`
+	Level     string     `json:"level"`
 }
 
 func GoogleEventToEvent(gEvent *calendar.Event) (*Event, error) {
@@ -36,6 +42,8 @@ func GoogleEventToEvent(gEvent *calendar.Event) (*Event, error) {
 		return nil, err
 	}
 
+	level := model.StringToLevel(description.Level)
+
 	return &Event{
 		ID:        TimeToID(gEvent.Start.DateTime),
 		Date:      TimeParse(gEvent.Start.DateTime),
@@ -43,6 +51,7 @@ func GoogleEventToEvent(gEvent *calendar.Event) (*Event, error) {
 		Attendees: description.Attendees,
 		Price:     description.Price,
 		Local:     gEvent.Location,
+		Level:     level.String(),
 	}, nil
 }
 
@@ -65,7 +74,7 @@ func (d *Description) String() string {
 	return string(content)
 }
 
-func (c *Client) GetEvents() ([]*Event, error) {
+func (c *Client) GetEvents(ctx context.Context) ([]*Event, error) {
 	events, err := c.Service.Events.List(c.CalendarID).
 		ShowDeleted(false).
 		SingleEvents(true).
@@ -78,9 +87,18 @@ func (c *Client) GetEvents() ([]*Event, error) {
 		return nil, err
 	}
 
+	user := ctx.Value(model.User)
+	userInfo := user.(spreadsheet.User)
+
 	retEvents := []*Event{}
 	for _, ev := range events.Items {
+
 		e, err := GoogleEventToEvent(ev)
+
+		if userInfo.Level < model.StringToLevel(e.Level) {
+			continue
+		}
+
 		if err != nil {
 			return nil, err
 		}
@@ -89,7 +107,7 @@ func (c *Client) GetEvents() ([]*Event, error) {
 	return retEvents, nil
 }
 
-func (c *Client) GetEvent(date string) (*calendar.Event, error) {
+func (c *Client) GetEvent(ctx context.Context, date string) (*calendar.Event, error) {
 	dateParsed, err := time.Parse(DateLayout, date)
 	if err != nil {
 		return nil, err
@@ -113,8 +131,8 @@ func (c *Client) GetEvent(date string) (*calendar.Event, error) {
 	return nil, err
 }
 
-func (c *Client) GetSingleEvent(eventDate string) (*calendar.Event, *Description, error) {
-	oldEvent, err := c.GetEvent(eventDate)
+func (c *Client) GetSingleEvent(ctx context.Context, eventDate string) (*calendar.Event, *Description, error) {
+	oldEvent, err := c.GetEvent(ctx, eventDate)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -124,13 +142,23 @@ func (c *Client) GetSingleEvent(eventDate string) (*calendar.Event, *Description
 		return nil, nil, err
 	}
 
+	userInfo := ctx.Value(model.User).(spreadsheet.User)
+	if userInfo.Level < model.StringToLevel(description.Level) {
+		return nil, nil, errors.New("user has no compatible level")
+	}
+
 	return oldEvent, description, nil
 }
 
-func (c *Client) AddAttendeeEvent(eventDate string, newAttende *Attendee) (*Event, error) {
-	oldEvent, description, err := c.GetSingleEvent(eventDate)
+func (c *Client) AddAttendeeEvent(ctx context.Context, eventDate string, newAttende *Attendee) (*Event, error) {
+	oldEvent, description, err := c.GetSingleEvent(ctx, eventDate)
 	if err != nil {
 		return nil, err
+	}
+
+	userInfo := ctx.Value(model.User).(spreadsheet.User)
+	if userInfo.Level < model.StringToLevel(description.Level) {
+		return nil, errors.New("user has no compatible level")
 	}
 
 	c.Logger.Info("updating event",
@@ -138,7 +166,7 @@ func (c *Client) AddAttendeeEvent(eventDate string, newAttende *Attendee) (*Even
 		zap.Any("attendes", newAttende),
 	)
 
-	for index, _ := range description.Attendees {
+	for index := range description.Attendees {
 		if description.Attendees[index].Name == newAttende.Name && description.Attendees[index].Email == newAttende.Email {
 			return GoogleEventToEvent(oldEvent)
 		}
@@ -158,8 +186,8 @@ func (c *Client) AddAttendeeEvent(eventDate string, newAttende *Attendee) (*Even
 	return GoogleEventToEvent(newEvent)
 }
 
-func (c *Client) RemoveAttendee(eventDate string, removeAttendee *Attendee) (*Event, error) {
-	oldEvent, description, err := c.GetSingleEvent(eventDate)
+func (c *Client) RemoveAttendee(ctx context.Context, eventDate string, removeAttendee *Attendee) (*Event, error) {
+	oldEvent, description, err := c.GetSingleEvent(ctx, eventDate)
 	if err != nil {
 		return nil, err
 	}
@@ -168,6 +196,11 @@ func (c *Client) RemoveAttendee(eventDate string, removeAttendee *Attendee) (*Ev
 		zap.Any("event", oldEvent),
 		zap.Any("attendes", removeAttendee),
 	)
+
+	userInfo := ctx.Value(model.User).(spreadsheet.User)
+	if userInfo.Level < model.StringToLevel(description.Level) {
+		return nil, errors.New("user has no compatible level")
+	}
 
 	for index := range description.Attendees {
 		if description.Attendees[index].Name == removeAttendee.Name && description.Attendees[index].Email == removeAttendee.Email {

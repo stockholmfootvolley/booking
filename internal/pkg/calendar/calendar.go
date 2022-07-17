@@ -16,11 +16,11 @@ type Client struct {
 }
 
 type API interface {
-	GetEvents() ([]*Event, error)
-	GetEvent(date string) (*calendar.Event, error)
+	GetEvents(ctx context.Context) ([]*Event, error)
+	GetEvent(ctx context.Context, date string) (*calendar.Event, error)
 	GetCalendars() (*calendar.CalendarList, error)
-	AddAttendeeEvent(eventDate string, newAttende *Attendee) (*Event, error)
-	RemoveAttendee(eventDate string, removeAttendee *Attendee) (*Event, error)
+	AddAttendeeEvent(ctx context.Context, eventDate string, newAttende *Attendee) (*Event, error)
+	RemoveAttendee(ctx context.Context, eventDate string, removeAttendee *Attendee) (*Event, error)
 }
 
 func New(serviceAccount string, calendarID string, logger *zap.Logger) (*Client, error) {

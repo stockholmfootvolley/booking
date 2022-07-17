@@ -3,6 +3,7 @@ package spreadsheet
 import (
 	"context"
 
+	"github.com/stockholmfootvolley/booking/internal/pkg/model"
 	"go.uber.org/zap"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/option"
@@ -15,12 +16,18 @@ type Client struct {
 	Logger        *zap.Logger
 }
 
+type User struct {
+	Name  string
+	Email string
+	Level model.Level
+}
+
 type API interface {
-	GetUsers() ([]string, error)
+	GetUsers() ([]User, error)
 }
 
 const (
-	ReadRange = "Sheet1!A:B"
+	ReadRange = "Sheet1!A:C"
 )
 
 func New(serviceAccount string, spreadsheetId string, logger *zap.Logger) (*Client, error) {
@@ -48,16 +55,23 @@ func getClient(serviceAccount string, logger *zap.Logger) (*sheets.Service, erro
 	return sheets.NewService(ctx, option.WithCredentials(credentials))
 }
 
-func (c *Client) GetUsers() ([]string, error) {
+func (c *Client) GetUsers() ([]User, error) {
 	resp, err := c.Service.Spreadsheets.Values.Get(c.SpreadsheetID, ReadRange).Do()
 	if err != nil {
 		c.Logger.Error("unable to retrieve data from sheet", zap.Error(err))
 	}
 
-	emails := []string{}
+	users := []User{}
 	for _, row := range resp.Values[1:] {
-		emails = append(emails, row[1].(string))
+		level := row[2].(string)
+		modelLevel := model.StringToLevel(level)
+
+		users = append(users, User{
+			Name:  row[0].(string),
+			Email: row[1].(string),
+			Level: modelLevel,
+		})
 	}
 
-	return emails, nil
+	return users, nil
 }
