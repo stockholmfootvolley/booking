@@ -71,7 +71,7 @@ func readDescription(description string) (*Description, error) {
 	}
 
 	sort.Slice(descObj.Attendees, func(i, j int) bool {
-		return descObj.Attendees[i].SignTime.After(descObj.Attendees[j].SignTime)
+		return descObj.Attendees[j].SignTime.After(descObj.Attendees[i].SignTime)
 	})
 
 	return descObj, nil
