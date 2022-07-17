@@ -14,9 +14,9 @@ import (
 )
 
 type Attendee struct {
-	Name     string    `json:"name"`
-	Email    string    `json:"email"`
-	SignTime time.Time `json:"sign_time"`
+	Name     string    `json:"name" yaml:"name"`
+	Email    string    `json:"email" yaml:"email"`
+	SignTime time.Time `json:"sign_time" yaml:"sign_time"`
 }
 
 type Description struct {
