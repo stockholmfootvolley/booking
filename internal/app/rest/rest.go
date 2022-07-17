@@ -56,7 +56,7 @@ func (s *Server) getEvents(c *gin.Context) {
 
 func (s *Server) getEvent(c *gin.Context) {
 	eventDate := c.Param("date")
-	event, err := s.calendarService.GetEvent(c, eventDate)
+	event, _, err := s.calendarService.GetSingleEvent(c, eventDate)
 	if err != nil {
 		c.AbortWithError(
 			http.StatusInternalServerError,

@@ -4,10 +4,13 @@ import (
 	"context"
 	"errors"
 	"sort"
+	"strings"
 	"time"
 
+	"github.com/microcosm-cc/bluemonday"
 	"github.com/stockholmfootvolley/booking/internal/pkg/model"
 	"github.com/stockholmfootvolley/booking/internal/pkg/spreadsheet"
+
 	"go.uber.org/zap"
 	"google.golang.org/api/calendar/v3"
 	"gopkg.in/yaml.v2"
@@ -22,7 +25,7 @@ type Attendee struct {
 type Description struct {
 	Price           int        `yaml:"price"`
 	Attendees       []Attendee `yaml:"attendes"`
-	Level           string     `yaml:"level"`
+	Level           string     `yaml:"level,omitempty"`
 	MaxParticipants int        `yaml:"max_participants"`
 }
 type Event struct {
@@ -65,7 +68,15 @@ func readDescription(description string) (*Description, error) {
 	descObj := &Description{
 		Attendees: []Attendee{},
 	}
-	err := yaml.Unmarshal([]byte(description), descObj)
+
+	// remove html
+	withBreakline := strings.ReplaceAll(description, "<br>", "\n")
+	noNbsp := strings.ReplaceAll(withBreakline, "&nbsp;", " ")
+
+	p := bluemonday.StrictPolicy()
+	nonHtml := p.Sanitize(noNbsp)
+
+	err := yaml.Unmarshal([]byte(nonHtml), descObj)
 	if err != nil {
 		return nil, err
 	}
