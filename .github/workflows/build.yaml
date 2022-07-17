@@ -53,7 +53,5 @@ jobs:
           docker push ${IMAGE_NAME}:latest
       
       - name: 'Deploy to Cloud Run'
-        uses: 'google-github-actions/deploy-cloudrun@v0'
-        with:
-          image: ${IMAGE_NAME}:latest
-          service: 'booking'
+        run: |
+          gcloud run deploy booking --image ${IMAGE_NAME}:latest
