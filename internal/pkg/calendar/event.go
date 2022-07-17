@@ -23,7 +23,7 @@ type Description struct {
 	Price           int        `yaml:"price"`
 	Attendees       []Attendee `yaml:"attendes"`
 	Level           string     `yaml:"level"`
-	MaxParticipants int        `json:"participants"`
+	MaxParticipants int        `yaml:"max_participants"`
 }
 type Event struct {
 	ID              string     `json:"id"`
