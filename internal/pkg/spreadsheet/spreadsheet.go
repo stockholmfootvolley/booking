@@ -63,6 +63,15 @@ func (c *Client) GetUsers() ([]User, error) {
 
 	users := []User{}
 	for _, row := range resp.Values[1:] {
+
+		if len(row) < 2 {
+			continue
+		}
+
+		if len(row) == 2 {
+			row = append(row, "")
+		}
+
 		level := row[2].(string)
 		modelLevel := model.StringToLevel(level)
 
