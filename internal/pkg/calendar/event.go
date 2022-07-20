@@ -160,7 +160,7 @@ func (c *Client) GetEvent(ctx context.Context, date string) (*calendar.Event, er
 	return nil, err
 }
 
-func (c *Client) GetSingleEvent(ctx context.Context, eventDate string) (*calendar.Event, *Description, error) {
+func (c *Client) GetSingleEvent(ctx context.Context, eventDate string, userInfo *spreadsheet.User) (*calendar.Event, *Description, error) {
 	oldEvent, err := c.GetEvent(ctx, eventDate)
 	if err != nil {
 		return nil, nil, err
@@ -171,7 +171,6 @@ func (c *Client) GetSingleEvent(ctx context.Context, eventDate string) (*calenda
 		return nil, nil, err
 	}
 
-	userInfo := ctx.Value(model.User).(spreadsheet.User)
 	if userInfo.Level < model.StringToLevel(description.Level) {
 		return nil, nil, errors.New("user has no compatible level")
 	}
@@ -180,7 +179,7 @@ func (c *Client) GetSingleEvent(ctx context.Context, eventDate string) (*calenda
 }
 
 func (c *Client) AddAttendeeEvent(ctx context.Context, eventDate string, payment *Payment, userInfo *spreadsheet.User) (*Event, error) {
-	oldEvent, description, err := c.GetSingleEvent(ctx, eventDate)
+	oldEvent, description, err := c.GetSingleEvent(ctx, eventDate, userInfo)
 	if err != nil {
 		return nil, err
 	}
@@ -223,12 +222,11 @@ func (c *Client) AddAttendeeEvent(ctx context.Context, eventDate string, payment
 	return GoogleEventToEvent(newEvent)
 }
 
-func (c *Client) RemoveAttendee(ctx context.Context, eventDate string) (*Event, error) {
-	oldEvent, description, err := c.GetSingleEvent(ctx, eventDate)
+func (c *Client) RemoveAttendee(ctx context.Context, eventDate string, userInfo *spreadsheet.User) (*Event, error) {
+	oldEvent, description, err := c.GetSingleEvent(ctx, eventDate, userInfo)
 	if err != nil {
 		return nil, err
 	}
-	userInfo := ctx.Value(model.User).(spreadsheet.User)
 
 	c.Logger.Info("removing attendee",
 		zap.Any("event", oldEvent),

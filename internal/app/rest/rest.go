@@ -72,7 +72,8 @@ func (s *Server) getEvents(c *gin.Context) {
 
 func (s *Server) getEvent(c *gin.Context) {
 	eventDate := c.Param("date")
-	event, _, err := s.calendarService.GetSingleEvent(c, eventDate)
+	userInfo := c.Value(model.User).(spreadsheet.User)
+	event, _, err := s.calendarService.GetSingleEvent(c, eventDate, &userInfo)
 	if err != nil {
 		c.AbortWithError(
 			http.StatusInternalServerError,
@@ -113,7 +114,8 @@ func (s *Server) addPresence(c *gin.Context) {
 
 func (s *Server) removePresence(c *gin.Context) {
 	eventDate := c.Param("date")
-	newEvent, err := s.calendarService.RemoveAttendee(c, eventDate)
+	userInfo := c.Value(model.User).(spreadsheet.User)
+	newEvent, err := s.calendarService.RemoveAttendee(c, eventDate, &userInfo)
 
 	if err != nil {
 		c.AbortWithError(

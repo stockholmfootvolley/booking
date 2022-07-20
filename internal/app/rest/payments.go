@@ -79,8 +79,9 @@ func (s *Server) webhook(c *gin.Context) {
 
 func (s *Server) getPaymentLink(c *gin.Context) {
 	eventDate := c.Param("date")
+	userInfoSheet := c.Value(model.User).(spreadsheet.User)
 
-	event, _, err := s.calendarService.GetSingleEvent(c, eventDate)
+	event, _, err := s.calendarService.GetSingleEvent(c, eventDate, &userInfoSheet)
 	if err != nil {
 		c.AbortWithError(
 			http.StatusInternalServerError,

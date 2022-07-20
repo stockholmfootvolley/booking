@@ -20,8 +20,8 @@ type API interface {
 	GetEvents(ctx context.Context) ([]*Event, error)
 	GetCalendars() (*calendar.CalendarList, error)
 	AddAttendeeEvent(ctx context.Context, eventDate string, payment *Payment, userInfo *spreadsheet.User) (*Event, error)
-	RemoveAttendee(ctx context.Context, eventDate string) (*Event, error)
-	GetSingleEvent(ctx context.Context, eventDate string) (*calendar.Event, *Description, error)
+	RemoveAttendee(ctx context.Context, eventDate string, userInfo *spreadsheet.User) (*Event, error)
+	GetSingleEvent(ctx context.Context, eventDate string, userInfo *spreadsheet.User) (*calendar.Event, *Description, error)
 }
 
 func New(serviceAccount string, calendarID string, logger *zap.Logger) (*Client, error) {
