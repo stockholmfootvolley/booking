@@ -16,6 +16,7 @@ import (
 const (
 	MetadataEventName string = "event"
 	MetadataUserEmail string = "user_email"
+	MetadataUserName  string = "user_name"
 )
 
 var (
@@ -82,6 +83,7 @@ func (c *Client) CreatePayment(ctx context.Context, price int64, event string, u
 	}
 
 	params.AddMetadata(MetadataEventName, event)
+	params.AddMetadata(MetadataUserName, user.Name)
 	params.AddMetadata(MetadataUserEmail, user.Email)
 
 	pl, err := paymentlink.New(params)

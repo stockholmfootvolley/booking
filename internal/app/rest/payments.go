@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stockholmfootvolley/booking/internal/pkg/calendar"
@@ -50,6 +51,7 @@ func (s *Server) webhook(c *gin.Context) {
 
 	eventID := checkoutSession.Metadata[payment.MetadataEventName]
 	userEmail := checkoutSession.Metadata[payment.MetadataUserEmail]
+	userName := checkoutSession.Metadata[payment.MetadataUserName]
 
 	user, err := s.spreadsheetService.GetUser(userEmail)
 	if err != nil {
@@ -57,17 +59,13 @@ func (s *Server) webhook(c *gin.Context) {
 		c.AbortWithStatus(http.StatusNotFound)
 		return
 	}
-
-	s.logger.Info("log amounts",
-		zap.Any("object", event),
-		zap.Any("idk2", checkoutSession),
-		zap.Any("amount", event.GetObjectValue("amount_total")),
-	)
+	user.Name = userName
 
 	// event seems valid: let's update calendar
+	amount, _ := strconv.Atoi(event.GetObjectValue("amount_total"))
 	_, err = s.calendarService.AddAttendeeEvent(c, eventID, &calendar.Payment{
 		Email:          userEmail,
-		Amount:         int(checkoutSession.PaymentIntent.AmountReceived) / 100,
+		Amount:         amount / 100,
 		PaymentReceipt: checkoutSession.ID,
 	}, user)
 	if err != nil {

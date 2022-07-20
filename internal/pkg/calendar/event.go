@@ -238,7 +238,7 @@ func (c *Client) RemoveAttendee(ctx context.Context, eventDate string, userInfo 
 	}
 
 	for index := range description.Attendees {
-		if description.Attendees[index].Name == userInfo.Name && description.Attendees[index].Email == userInfo.Email {
+		if strings.EqualFold(description.Attendees[index].Email, userInfo.Email) {
 			description.Attendees = append(description.Attendees[:index], description.Attendees[index+1:]...)
 			break
 		}
