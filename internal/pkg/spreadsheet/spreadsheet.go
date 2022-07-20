@@ -2,6 +2,8 @@ package spreadsheet
 
 import (
 	"context"
+	"errors"
+	"strings"
 
 	"github.com/stockholmfootvolley/booking/internal/pkg/model"
 	"go.uber.org/zap"
@@ -24,6 +26,7 @@ type User struct {
 
 type API interface {
 	GetUsers() ([]User, error)
+	GetUser(email string) (*User, error)
 }
 
 const (
@@ -83,4 +86,19 @@ func (c *Client) GetUsers() ([]User, error) {
 	}
 
 	return users, nil
+}
+
+func (c *Client) GetUser(email string) (*User, error) {
+	users, err := c.GetUsers()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, user := range users {
+		if strings.EqualFold(user.Email, email) {
+			return &user, nil
+		}
+	}
+
+	return nil, errors.New("not found")
 }

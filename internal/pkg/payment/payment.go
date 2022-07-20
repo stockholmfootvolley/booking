@@ -6,17 +6,16 @@ import (
 	"net/url"
 	"strconv"
 
+	"github.com/stockholmfootvolley/booking/internal/pkg/spreadsheet"
 	"github.com/stripe/stripe-go/v72"
 	"github.com/stripe/stripe-go/v72/paymentlink"
 	"github.com/stripe/stripe-go/v72/price"
 	"go.uber.org/zap"
-	"google.golang.org/api/idtoken"
 )
 
 const (
 	MetadataEventName string = "event"
 	MetadataUserEmail string = "user_email"
-	MetadataUserName  string = "user_name"
 )
 
 var (
@@ -30,7 +29,7 @@ type Client struct {
 }
 
 type API interface {
-	CreatePayment(ctx context.Context, price int64, event string, user idtoken.Payload) (string, error)
+	CreatePayment(ctx context.Context, price int64, event string, user spreadsheet.User) (string, error)
 	CreatePrice(ctx context.Context, price int64) (*stripe.Price, error)
 	GetPrice(ctx context.Context, price int64) (*stripe.Price, error)
 }
@@ -46,7 +45,7 @@ func New(apiKey string, productID string, logger *zap.Logger) API {
 
 }
 
-func (c *Client) CreatePayment(ctx context.Context, price int64, event string, user idtoken.Payload) (string, error) {
+func (c *Client) CreatePayment(ctx context.Context, price int64, event string, user spreadsheet.User) (string, error) {
 
 	availablePriceObj, err := c.GetPrice(ctx, price)
 	if err != nil {
@@ -82,8 +81,7 @@ func (c *Client) CreatePayment(ctx context.Context, price int64, event string, u
 	}
 
 	params.AddMetadata(MetadataEventName, event)
-	params.AddMetadata(MetadataUserEmail, user.Claims["email"].(string))
-	params.AddMetadata(MetadataUserName, user.Claims["name"].(string))
+	params.AddMetadata(MetadataUserEmail, user.Email)
 
 	pl, err := paymentlink.New(params)
 	if err != nil {

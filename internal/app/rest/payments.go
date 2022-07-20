@@ -14,7 +14,6 @@ import (
 	"github.com/stripe/stripe-go"
 	"github.com/stripe/stripe-go/webhook"
 	"go.uber.org/zap"
-	"google.golang.org/api/idtoken"
 )
 
 type PaymentLink struct {
@@ -50,12 +49,12 @@ func (s *Server) webhook(c *gin.Context) {
 	}
 
 	eventID := checkoutSession.Metadata[payment.MetadataEventName]
-	userName := checkoutSession.Metadata[payment.MetadataUserName]
 	userEmail := checkoutSession.Metadata[payment.MetadataUserEmail]
 
-	if eventID == "" || userName == "" || userEmail == "" {
-		s.logger.Error("metadata seems incorrect", zap.Any("metadata", checkoutSession.Metadata))
-		c.AbortWithStatus(http.StatusInternalServerError)
+	user, err := s.spreadsheetService.GetUser(userEmail)
+	if err != nil {
+		s.logger.Error("could not found user on metadata", zap.String("user", user.Email))
+		c.AbortWithStatus(http.StatusNotFound)
 		return
 	}
 
@@ -64,10 +63,7 @@ func (s *Server) webhook(c *gin.Context) {
 		Email:          userEmail,
 		Amount:         strconv.Itoa(int(checkoutSession.PaymentIntent.AmountReceived) / 100),
 		PaymentReceipt: checkoutSession.ID,
-	}, &spreadsheet.User{
-		Email: userEmail,
-		Name:  userName,
-	})
+	}, user)
 	if err != nil {
 		s.logger.Error("could not update event", zap.Error(err))
 		c.AbortWithStatus(http.StatusInternalServerError)
@@ -79,9 +75,9 @@ func (s *Server) webhook(c *gin.Context) {
 
 func (s *Server) getPaymentLink(c *gin.Context) {
 	eventDate := c.Param("date")
-	userInfoSheet := c.Value(model.User).(spreadsheet.User)
+	userInfo := c.Value(model.User).(spreadsheet.User)
 
-	event, _, err := s.calendarService.GetSingleEvent(c, eventDate, &userInfoSheet)
+	event, _, err := s.calendarService.GetSingleEvent(c, eventDate, &userInfo)
 	if err != nil {
 		c.AbortWithError(
 			http.StatusInternalServerError,
@@ -97,7 +93,6 @@ func (s *Server) getPaymentLink(c *gin.Context) {
 		return
 	}
 
-	userInfo, ok := c.Value(model.Token).(*idtoken.Payload)
 	if !ok {
 		c.AbortWithError(
 			http.StatusInternalServerError,
@@ -105,7 +100,7 @@ func (s *Server) getPaymentLink(c *gin.Context) {
 		return
 	}
 
-	link, err := s.paymentService.CreatePayment(c, int64(newEvent.Price), eventDate, *userInfo)
+	link, err := s.paymentService.CreatePayment(c, int64(newEvent.Price), eventDate, userInfo)
 	if err != nil {
 		c.AbortWithError(
 			http.StatusInternalServerError,
