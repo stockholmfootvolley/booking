@@ -12,6 +12,7 @@ import (
 	"github.com/stockholmfootvolley/booking/internal/pkg/spreadsheet"
 	"github.com/stripe/stripe-go"
 	"github.com/stripe/stripe-go/webhook"
+
 	"go.uber.org/zap"
 )
 
@@ -58,9 +59,7 @@ func (s *Server) webhook(c *gin.Context) {
 	}
 
 	s.logger.Info("log amounts",
-		zap.Any("intent", checkoutSession.PaymentIntent),
-		zap.Any("displayItems", checkoutSession.DisplayItems),
-		zap.Any("idk", checkoutSession.SetupIntent),
+		zap.Any("object", event.GetObjectValue()),
 		zap.Any("idk2", checkoutSession),
 	)
 
