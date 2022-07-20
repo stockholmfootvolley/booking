@@ -59,8 +59,9 @@ func (s *Server) webhook(c *gin.Context) {
 	}
 
 	s.logger.Info("log amounts",
-		zap.Any("object", event.GetObjectValue()),
+		zap.Any("object", event),
 		zap.Any("idk2", checkoutSession),
+		zap.Any("amount", event.GetObjectValue("amount")),
 	)
 
 	// event seems valid: let's update calendar
