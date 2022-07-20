@@ -16,6 +16,10 @@ import (
 	"google.golang.org/api/idtoken"
 )
 
+const (
+	WebhookPath string = "/stripe/webhook"
+)
+
 var (
 	ErrGetEvents   = errors.New("could not retrieve events")
 	ErrMarshalJSON = errors.New("could not marshal json")
@@ -139,12 +143,17 @@ func (s *Server) Serve() {
 
 	// webhook
 	router.GET("/event/:date/payment", s.getPaymentLink)
-	router.POST("/stripe/webhook", s.webhook)
+	router.POST(WebhookPath, s.webhook)
 	router.Run("0.0.0.0:" + s.port)
 }
 
 func (s *Server) addParsedToken() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		if c.Request.URL.Path == WebhookPath {
+			c.Next()
+			return
+		}
+
 		token := c.Request.Header.Get("authorization")
 		if token == "" {
 			c.AbortWithStatus(http.StatusUnauthorized)
