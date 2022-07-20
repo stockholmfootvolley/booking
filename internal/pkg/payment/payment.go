@@ -59,9 +59,10 @@ func (c *Client) CreatePayment(ctx context.Context, price int64, event string, u
 	}
 
 	url := url.URL{
-		Scheme: "https",
-		Host:   "stockholmfootvolley.github.io",
-		Path:   "frontend/#/" + event,
+		Scheme:   "https",
+		Host:     "stockholmfootvolley.github.io",
+		Path:     "frontend/",
+		Fragment: "/" + event,
 	}
 
 	params := &stripe.PaymentLinkParams{
