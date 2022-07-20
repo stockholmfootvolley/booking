@@ -5,9 +5,7 @@ import (
 	"errors"
 	"net/url"
 	"strconv"
-	"strings"
 
-	"github.com/gin-gonic/gin"
 	"github.com/stripe/stripe-go/v72"
 	"github.com/stripe/stripe-go/v72/paymentlink"
 	"github.com/stripe/stripe-go/v72/price"
@@ -61,11 +59,10 @@ func (c *Client) CreatePayment(ctx context.Context, price int64, event string, u
 		}
 	}
 
-	ginContext := ctx.(*gin.Context)
 	url := url.URL{
 		Scheme: "https",
-		Host:   ginContext.Request.Host,
-		Path:   strings.ReplaceAll(ginContext.Request.RequestURI, "/payment", ""),
+		Host:   "stockholmfootvolley.github.io",
+		Path:   "frontend/#/" + event,
 	}
 
 	params := &stripe.PaymentLinkParams{
