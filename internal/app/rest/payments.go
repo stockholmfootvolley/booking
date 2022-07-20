@@ -4,7 +4,6 @@ import (
 	"errors"
 	"io/ioutil"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stockholmfootvolley/booking/internal/pkg/calendar"
@@ -58,10 +57,15 @@ func (s *Server) webhook(c *gin.Context) {
 		return
 	}
 
+	s.logger.Info("log amounts",
+		zap.Any("intent", checkoutSession.PaymentIntent),
+		zap.Any("displayItems", checkoutSession.DisplayItems),
+	)
+
 	// event seems valid: let's update calendar
 	_, err = s.calendarService.AddAttendeeEvent(c, eventID, &calendar.Payment{
 		Email:          userEmail,
-		Amount:         strconv.Itoa(int(checkoutSession.PaymentIntent.AmountReceived) / 100),
+		Amount:         int(checkoutSession.PaymentIntent.AmountReceived) / 100,
 		PaymentReceipt: checkoutSession.ID,
 	}, user)
 	if err != nil {

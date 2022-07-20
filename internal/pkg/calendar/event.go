@@ -32,7 +32,7 @@ type Description struct {
 
 type Payment struct {
 	Email          string `yaml:"email"`
-	Amount         string `yaml:"amount"`
+	Amount         int    `yaml:"amount"`
 	PaymentReceipt string `yaml:"receipt"`
 }
 type Event struct {
