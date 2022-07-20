@@ -27,6 +27,13 @@ type Description struct {
 	Attendees       []Attendee `yaml:"attendes"`
 	Level           string     `yaml:"level,omitempty"`
 	MaxParticipants int        `yaml:"max_participants"`
+	Payments        []Payment  `yaml:"payments"`
+}
+
+type Payment struct {
+	Email          string `yaml:"email"`
+	Amount         string `yaml:"amount"`
+	PaymentReceipt string `yaml:"receipt"`
 }
 type Event struct {
 	ID              string     `json:"id"`
@@ -172,15 +179,18 @@ func (c *Client) GetSingleEvent(ctx context.Context, eventDate string) (*calenda
 	return oldEvent, description, nil
 }
 
-func (c *Client) AddAttendeeEvent(ctx context.Context, eventDate string) (*Event, error) {
+func (c *Client) AddAttendeeEvent(ctx context.Context, eventDate string, payment *Payment, userInfo *spreadsheet.User) (*Event, error) {
 	oldEvent, description, err := c.GetSingleEvent(ctx, eventDate)
 	if err != nil {
 		return nil, err
 	}
 
-	userInfo := ctx.Value(model.User).(spreadsheet.User)
 	if userInfo.Level < model.StringToLevel(description.Level) {
 		return nil, errors.New("user has no compatible level")
+	}
+
+	if description.Price > 0 && payment == nil {
+		return nil, model.ErrRequiresPayment
 	}
 
 	c.Logger.Info("updating event",
@@ -198,6 +208,10 @@ func (c *Client) AddAttendeeEvent(ctx context.Context, eventDate string) (*Event
 		Email:    userInfo.Email,
 		SignTime: time.Now(),
 	})
+
+	if payment != nil {
+		description.Payments = append(description.Payments, *payment)
+	}
 
 	oldEvent.Description = description.String()
 	newEvent, err := c.Service.Events.Update(c.CalendarID, oldEvent.Id, oldEvent).

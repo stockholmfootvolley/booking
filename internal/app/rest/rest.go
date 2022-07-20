@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stockholmfootvolley/booking/internal/pkg/calendar"
 	"github.com/stockholmfootvolley/booking/internal/pkg/model"
+	"github.com/stockholmfootvolley/booking/internal/pkg/payment"
 	"github.com/stockholmfootvolley/booking/internal/pkg/spreadsheet"
 
 	"go.uber.org/zap"
@@ -23,23 +24,34 @@ var (
 type Server struct {
 	calendarService    calendar.API
 	spreadsheetService spreadsheet.API
+	paymentService     payment.API
 	port               string
 	logger             *zap.Logger
 	clientID           string
+	webhookKey         string
 }
 
 type API interface {
 	Serve()
 }
 
-func New(calendarService calendar.API, spreadsheetService spreadsheet.API, port string, clientID string, logger *zap.Logger) API {
+func New(
+	calendarService calendar.API,
+	spreadsheetService spreadsheet.API,
+	paymentService payment.API,
+	port string,
+	clientID string,
+	webhookKey string,
+	logger *zap.Logger) API {
 
 	return &Server{
 		calendarService:    calendarService,
 		spreadsheetService: spreadsheetService,
+		paymentService:     paymentService,
 		port:               port,
 		clientID:           clientID,
 		logger:             logger,
+		webhookKey:         webhookKey,
 	}
 }
 
@@ -77,7 +89,14 @@ func (s *Server) getEvent(c *gin.Context) {
 func (s *Server) addPresence(c *gin.Context) {
 	eventDate := c.Param("date")
 
-	newEvent, err := s.calendarService.AddAttendeeEvent(c, eventDate)
+	userInfo := c.Value(model.User).(spreadsheet.User)
+	newEvent, err := s.calendarService.AddAttendeeEvent(c, eventDate, nil, &userInfo)
+
+	if errors.Is(err, model.ErrRequiresPayment) {
+		c.AbortWithStatus(
+			http.StatusPaymentRequired)
+		return
+	}
 
 	if err != nil {
 		c.AbortWithError(
@@ -85,7 +104,7 @@ func (s *Server) addPresence(c *gin.Context) {
 			errors.New("addPresence: could not convert event "+eventDate))
 		return
 	}
-	c.IndentedJSON(http.StatusOK, newEvent)
+	c.IndentedJSON(http.StatusCreated, newEvent)
 }
 
 func (s *Server) removePresence(c *gin.Context) {
@@ -98,7 +117,7 @@ func (s *Server) removePresence(c *gin.Context) {
 			errors.New("removePresence: could not convert event "+eventDate))
 		return
 	}
-	c.IndentedJSON(http.StatusOK, newEvent)
+	c.IndentedJSON(http.StatusAccepted, newEvent)
 }
 
 func (s *Server) Serve() {
@@ -117,6 +136,10 @@ func (s *Server) Serve() {
 	router.GET("/event/:date", s.getEvent)
 	router.POST("/event/:date", s.addPresence)
 	router.DELETE("/event/:date", s.removePresence)
+
+	// webhook
+	router.GET("/event/:date/payment", s.getPaymentLink)
+	router.POST("/stripe/webhook", s.webhook)
 	router.Run("0.0.0.0:" + s.port)
 }
 

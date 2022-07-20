@@ -1,6 +1,9 @@
 package model
 
-import "time"
+import (
+	"errors"
+	"time"
+)
 
 type Level uint64
 
@@ -15,6 +18,10 @@ const (
 	Beginner Level = iota
 	Medium
 	Advanced
+)
+
+var (
+	ErrRequiresPayment error = errors.New("payment is required")
 )
 
 func (l Level) String() string {
