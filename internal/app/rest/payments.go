@@ -93,13 +93,6 @@ func (s *Server) getPaymentLink(c *gin.Context) {
 		return
 	}
 
-	if !ok {
-		c.AbortWithError(
-			http.StatusInternalServerError,
-			errors.New("getPayment: could not retrieve user logged in "+eventDate))
-		return
-	}
-
 	link, err := s.paymentService.CreatePayment(c, int64(newEvent.Price), eventDate, userInfo)
 	if err != nil {
 		c.AbortWithError(
