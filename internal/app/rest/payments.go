@@ -77,35 +77,24 @@ func (s *Server) webhook(c *gin.Context) {
 	c.AbortWithStatus(http.StatusOK)
 }
 
-func (s *Server) getPaymentLink(c *gin.Context) {
+func (s *Server) getPaymentLink(c *gin.Context) (*PaymentLink, error) {
 	eventDate := c.Param("date")
 	userInfo := c.Value(model.User).(spreadsheet.User)
 
 	event, _, err := s.calendarService.GetSingleEvent(c, eventDate, &userInfo)
 	if err != nil {
-		c.AbortWithError(
-			http.StatusInternalServerError,
-			errors.New("could not found event for date "+eventDate))
-		return
+		return nil, errors.New("could not found event for date " + eventDate)
 	}
 
 	newEvent, err := calendar.GoogleEventToEvent(event)
 	if err != nil {
-		c.AbortWithError(
-			http.StatusInternalServerError,
-			errors.New("getPayment: could not convert event "+eventDate))
-		return
+		return nil, errors.New("getPayment: could not convert event " + eventDate)
 	}
 
 	link, err := s.paymentService.CreatePayment(c, int64(newEvent.Price), eventDate, userInfo)
 	if err != nil {
-		c.AbortWithError(
-			http.StatusInternalServerError,
-			errors.New("getPayment: could not create payment link "+eventDate))
-		return
+		return nil, errors.New("getPayment: could not create payment link " + eventDate)
 	}
 
-	c.IndentedJSON(http.StatusCreated, PaymentLink{
-		PaymentLink: link,
-	})
+	return &PaymentLink{link}, nil
 }

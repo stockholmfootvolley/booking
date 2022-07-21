@@ -98,7 +98,15 @@ func (s *Server) addPresence(c *gin.Context) {
 	newEvent, err := s.calendarService.AddAttendeeEvent(c, eventDate, nil, &userInfo)
 
 	if errors.Is(err, model.ErrRequiresPayment) {
-		s.getPaymentLink(c)
+		link, err := s.getPaymentLink(c)
+		if err != nil {
+			c.AbortWithError(
+				http.StatusInternalServerError,
+				errors.New("addPresence: could not create payment link "+eventDate))
+			return
+		}
+
+		c.IndentedJSON(http.StatusTemporaryRedirect, link)
 		return
 	}
 
@@ -143,7 +151,6 @@ func (s *Server) Serve() {
 	router.DELETE("/event/:date", s.removePresence)
 
 	// webhook
-	router.GET("/event/:date/payment", s.getPaymentLink)
 	router.POST(WebhookPath, s.webhook)
 	router.Run("0.0.0.0:" + s.port)
 }
