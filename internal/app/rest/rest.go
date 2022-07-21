@@ -98,8 +98,7 @@ func (s *Server) addPresence(c *gin.Context) {
 	newEvent, err := s.calendarService.AddAttendeeEvent(c, eventDate, nil, &userInfo)
 
 	if errors.Is(err, model.ErrRequiresPayment) {
-		c.AbortWithStatus(
-			http.StatusPaymentRequired)
+		s.getPaymentLink(c)
 		return
 	}
 
