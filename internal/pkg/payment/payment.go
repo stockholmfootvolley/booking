@@ -104,15 +104,17 @@ func (c *Client) CreatePrice(ctx context.Context, objPrice int64) (*stripe.Price
 		Product:    stripe.String(c.ProductID),
 		UnitAmount: stripe.Int64(objPrice),
 	}
+
+	params.AddMetadata("price", strconv.Itoa(int(objPrice)))
 	return price.New(params)
 }
 
 func (c *Client) GetPrice(ctx context.Context, objPrice int64) (*stripe.Price, error) {
-	params := &stripe.PriceListParams{}
-	params.Filters.AddFilter("price", "", strconv.Itoa(int(objPrice*100)))
-	i := price.List(params)
-	for i.Next() {
-		return i.Price(), nil
+	params := &stripe.PriceSearchParams{}
+	params.Query = *stripe.String("active:'true' AND metadata['price']:'" + strconv.Itoa(int(objPrice*100)) + "'")
+	iter := price.Search(params)
+	for iter.Next() {
+		return iter.Price(), nil
 	}
 	return nil, ErrNotFound
 }
