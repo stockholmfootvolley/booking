@@ -109,7 +109,7 @@ func (c *Client) CreatePrice(ctx context.Context, objPrice int64) (*stripe.Price
 
 func (c *Client) GetPrice(ctx context.Context, objPrice int64) (*stripe.Price, error) {
 	params := &stripe.PriceListParams{}
-	params.Filters.AddFilter("price", "", strconv.Itoa(int(objPrice)))
+	params.Filters.AddFilter("price", "", strconv.Itoa(int(objPrice*100)))
 	i := price.List(params)
 	for i.Next() {
 		return i.Price(), nil
