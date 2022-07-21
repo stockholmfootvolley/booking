@@ -22,12 +22,13 @@ type Attendee struct {
 	SignTime time.Time `json:"sign_time" yaml:"sign_time"`
 }
 
+type Payments []Payment
 type Description struct {
 	Price           int        `yaml:"price"`
 	Attendees       []Attendee `yaml:"attendes"`
 	Level           string     `yaml:"level,omitempty"`
 	MaxParticipants int        `yaml:"max_participants"`
-	Payments        []Payment  `yaml:"payments"`
+	Payments        Payments   `yaml:"payments"`
 }
 
 type Payment struct {
@@ -188,7 +189,7 @@ func (c *Client) AddAttendeeEvent(ctx context.Context, eventDate string, payment
 		return nil, errors.New("user has no compatible level")
 	}
 
-	if description.Price > 0 && payment == nil {
+	if description.Price > 0 && payment == nil && description.Payments.HasUserPaid(userInfo.Email) {
 		return nil, model.ErrRequiresPayment
 	}
 
@@ -252,4 +253,13 @@ func (c *Client) RemoveAttendee(ctx context.Context, eventDate string, userInfo 
 		return nil, err
 	}
 	return GoogleEventToEvent(newEvent)
+}
+
+func (p Payments) HasUserPaid(email string) bool {
+	for _, payment := range p {
+		if strings.EqualFold(email, payment.Email) {
+			return true
+		}
+	}
+	return false
 }
