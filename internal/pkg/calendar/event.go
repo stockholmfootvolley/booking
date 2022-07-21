@@ -189,7 +189,7 @@ func (c *Client) AddAttendeeEvent(ctx context.Context, eventDate string, payment
 		return nil, errors.New("user has no compatible level")
 	}
 
-	if description.Price > 0 && payment == nil && description.Payments.HasUserPaid(userInfo.Email) {
+	if description.Price > 0 && payment == nil && !description.Payments.HasUserPaid(userInfo.Email) {
 		return nil, model.ErrRequiresPayment
 	}
 
