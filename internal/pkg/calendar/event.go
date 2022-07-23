@@ -7,11 +7,11 @@ import (
 	"strings"
 	"time"
 
+	"cloud.google.com/go/logging"
 	"github.com/microcosm-cc/bluemonday"
 	"github.com/stockholmfootvolley/booking/internal/pkg/model"
 	"github.com/stockholmfootvolley/booking/internal/pkg/spreadsheet"
 
-	"go.uber.org/zap"
 	"google.golang.org/api/calendar/v3"
 	"gopkg.in/yaml.v2"
 )
@@ -193,9 +193,13 @@ func (c *Client) AddAttendeeEvent(ctx context.Context, eventDate string, payment
 		return nil, model.ErrRequiresPayment
 	}
 
-	c.Logger.Info("updating event",
-		zap.Any("event", oldEvent),
-		zap.Any("attendes", userInfo),
+	c.Logger.Log(logging.Entry{
+		Severity: logging.Info,
+		Payload: map[string]interface{}{
+			"message":  "updating event",
+			"event":    oldEvent,
+			"attendes": userInfo,
+		}},
 	)
 
 	for index := range description.Attendees {
@@ -217,7 +221,14 @@ func (c *Client) AddAttendeeEvent(ctx context.Context, eventDate string, payment
 	newEvent, err := c.Service.Events.Update(c.CalendarID, oldEvent.Id, oldEvent).
 		Do()
 	if err != nil {
-		c.Logger.Error("failed to update event", zap.Error(err))
+		c.Logger.Log(logging.Entry{
+			Severity: logging.Error,
+			Payload: map[string]interface{}{
+				"message": "failed to update event",
+				"error":   err,
+			}},
+		)
+
 		return nil, err
 	}
 	return GoogleEventToEvent(newEvent)
@@ -229,9 +240,13 @@ func (c *Client) RemoveAttendee(ctx context.Context, eventDate string, userInfo 
 		return nil, err
 	}
 
-	c.Logger.Info("removing attendee",
-		zap.Any("event", oldEvent),
-		zap.Any("attendes", userInfo),
+	c.Logger.Log(logging.Entry{
+		Severity: logging.Info,
+		Payload: map[string]interface{}{
+			"message":  "removing attendee",
+			"event":    oldEvent,
+			"attendes": userInfo,
+		}},
 	)
 
 	if userInfo.Level < model.StringToLevel(description.Level) {
@@ -249,7 +264,13 @@ func (c *Client) RemoveAttendee(ctx context.Context, eventDate string, userInfo 
 	newEvent, err := c.Service.Events.Update(c.CalendarID, oldEvent.Id, oldEvent).
 		Do()
 	if err != nil {
-		c.Logger.Error("failed to update event", zap.Error(err))
+		c.Logger.Log(logging.Entry{
+			Severity: logging.Error,
+			Payload: map[string]interface{}{
+				"message": "failed to update event",
+				"error":   err,
+			}},
+		)
 		return nil, err
 	}
 	return GoogleEventToEvent(newEvent)

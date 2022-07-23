@@ -5,8 +5,8 @@ import (
 	"errors"
 	"strings"
 
+	"cloud.google.com/go/logging"
 	"github.com/stockholmfootvolley/booking/internal/pkg/model"
-	"go.uber.org/zap"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/option"
 	"google.golang.org/api/sheets/v4"
@@ -15,7 +15,7 @@ import (
 type Client struct {
 	Service       *sheets.Service
 	SpreadsheetID string
-	Logger        *zap.Logger
+	Logger        *logging.Logger
 }
 
 type User struct {
@@ -33,10 +33,16 @@ const (
 	ReadRange = "Sheet1!A:C"
 )
 
-func New(serviceAccount string, spreadsheetId string, logger *zap.Logger) (*Client, error) {
+func New(serviceAccount string, spreadsheetId string, logger *logging.Logger) (*Client, error) {
 	service, err := getClient(serviceAccount, logger)
 	if err != nil {
-		logger.Error("unable to retrieve sheets client", zap.Error(err))
+		logger.Log(logging.Entry{
+			Severity: logging.Error,
+			Payload: map[string]interface{}{
+				"message": "unable to retrieve sheets client",
+				"error":   err,
+			}},
+		)
 		return nil, err
 	}
 
@@ -47,11 +53,17 @@ func New(serviceAccount string, spreadsheetId string, logger *zap.Logger) (*Clie
 	}, nil
 
 }
-func getClient(serviceAccount string, logger *zap.Logger) (*sheets.Service, error) {
+func getClient(serviceAccount string, logger *logging.Logger) (*sheets.Service, error) {
 	ctx := context.Background()
 	credentials, err := google.CredentialsFromJSON(ctx, []byte(serviceAccount), sheets.SpreadsheetsReadonlyScope)
 	if err != nil {
-		logger.Error("unable read credentials", zap.Error(err))
+		logger.Log(logging.Entry{
+			Severity: logging.Error,
+			Payload: map[string]interface{}{
+				"message": "unable read credentials",
+				"error":   err,
+			}},
+		)
 		return nil, err
 	}
 
@@ -61,7 +73,13 @@ func getClient(serviceAccount string, logger *zap.Logger) (*sheets.Service, erro
 func (c *Client) GetUsers() ([]User, error) {
 	resp, err := c.Service.Spreadsheets.Values.Get(c.SpreadsheetID, ReadRange).Do()
 	if err != nil {
-		c.Logger.Error("unable to retrieve data from sheet", zap.Error(err))
+		c.Logger.Log(logging.Entry{
+			Severity: logging.Error,
+			Payload: map[string]interface{}{
+				"message": "unable to retrieve data from sheet",
+				"error":   err,
+			}},
+		)
 	}
 
 	users := []User{}

@@ -1,15 +1,16 @@
 package main
 
 import (
+	"context"
 	"encoding/base64"
 	"log"
 
+	"cloud.google.com/go/logging"
 	"github.com/caarlos0/env"
 	"github.com/stockholmfootvolley/booking/internal/app/rest"
 	"github.com/stockholmfootvolley/booking/internal/pkg/calendar"
 	"github.com/stockholmfootvolley/booking/internal/pkg/payment"
 	"github.com/stockholmfootvolley/booking/internal/pkg/spreadsheet"
-	"go.uber.org/zap"
 )
 
 type config struct {
@@ -21,6 +22,7 @@ type config struct {
 	StripeKey       string `env:"STRIPE_KEY,required"`
 	ProductID       string `env:"PRODUCT_ID,required"`
 	StripeWebookKey string `env:"STRIPE_WEBHOOK_KEY,required"`
+	ProjectID       string `env:"PROJECT_ID,required"`
 }
 
 func main() {
@@ -35,7 +37,15 @@ func main() {
 	}
 	cfg.ServiceAccount = string(serviceAccountPlainText)
 
-	logger, err := zap.NewProduction()
+	// Creates a client.
+	ctx := context.Background()
+	client, err := logging.NewClient(ctx, cfg.ProjectID)
+	if err != nil {
+		log.Fatalf("Failed to create client: %v", err)
+	}
+	defer client.Close()
+
+	logger := client.Logger(cfg.ProjectID)
 	if err != nil {
 		log.Fatalf("could not start logger")
 	}

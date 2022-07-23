@@ -6,11 +6,11 @@ import (
 	"net/url"
 	"strconv"
 
+	"cloud.google.com/go/logging"
 	"github.com/stockholmfootvolley/booking/internal/pkg/spreadsheet"
 	"github.com/stripe/stripe-go/v72"
 	"github.com/stripe/stripe-go/v72/paymentlink"
 	"github.com/stripe/stripe-go/v72/price"
-	"go.uber.org/zap"
 )
 
 const (
@@ -26,7 +26,7 @@ var (
 type Client struct {
 	StripeKey string
 	ProductID string
-	Logger    *zap.Logger
+	Logger    *logging.Logger
 }
 
 type API interface {
@@ -35,7 +35,7 @@ type API interface {
 	GetPrice(ctx context.Context, price int64) (*stripe.Price, error)
 }
 
-func New(apiKey string, productID string, logger *zap.Logger) API {
+func New(apiKey string, productID string, logger *logging.Logger) API {
 	stripe.Key = apiKey
 
 	return &Client{

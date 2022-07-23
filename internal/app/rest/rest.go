@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"cloud.google.com/go/logging"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/stockholmfootvolley/booking/internal/pkg/calendar"
@@ -12,7 +13,6 @@ import (
 	"github.com/stockholmfootvolley/booking/internal/pkg/payment"
 	"github.com/stockholmfootvolley/booking/internal/pkg/spreadsheet"
 
-	"go.uber.org/zap"
 	"google.golang.org/api/idtoken"
 )
 
@@ -30,7 +30,7 @@ type Server struct {
 	spreadsheetService spreadsheet.API
 	paymentService     payment.API
 	port               string
-	logger             *zap.Logger
+	logger             *logging.Logger
 	clientID           string
 	webhookKey         string
 }
@@ -46,7 +46,7 @@ func New(
 	port string,
 	clientID string,
 	webhookKey string,
-	logger *zap.Logger) API {
+	logger *logging.Logger) API {
 
 	return &Server{
 		calendarService:    calendarService,

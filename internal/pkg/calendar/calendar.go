@@ -3,8 +3,8 @@ package calendar
 import (
 	"context"
 
+	"cloud.google.com/go/logging"
 	"github.com/stockholmfootvolley/booking/internal/pkg/spreadsheet"
-	"go.uber.org/zap"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/calendar/v3"
 	"google.golang.org/api/option"
@@ -13,7 +13,7 @@ import (
 type Client struct {
 	Service    *calendar.Service
 	CalendarID string
-	Logger     *zap.Logger
+	Logger     *logging.Logger
 }
 
 type API interface {
@@ -24,10 +24,16 @@ type API interface {
 	GetSingleEvent(ctx context.Context, eventDate string, userInfo *spreadsheet.User) (*calendar.Event, *Description, error)
 }
 
-func New(serviceAccount string, calendarID string, logger *zap.Logger) (*Client, error) {
+func New(serviceAccount string, calendarID string, logger *logging.Logger) (*Client, error) {
 	service, err := getClient(serviceAccount, logger)
 	if err != nil {
-		logger.Error("unable to retrieve Calendar client", zap.Error(err))
+		logger.Log(logging.Entry{
+			Severity: logging.Error,
+			Payload: map[string]interface{}{
+				"message": "unable to retrieve Calendar client",
+				"error":   err,
+			}},
+		)
 		return nil, err
 	}
 
@@ -38,17 +44,29 @@ func New(serviceAccount string, calendarID string, logger *zap.Logger) (*Client,
 	}, nil
 }
 
-func getClient(serviceAccount string, logger *zap.Logger) (*calendar.Service, error) {
+func getClient(serviceAccount string, logger *logging.Logger) (*calendar.Service, error) {
 	ctx := context.Background()
 	credentials, err := google.CredentialsFromJSON(ctx, []byte(serviceAccount), calendar.CalendarEventsScope)
 	if err != nil {
-		logger.Error("unable read credentials", zap.Error(err))
+		logger.Log(logging.Entry{
+			Severity: logging.Error,
+			Payload: map[string]interface{}{
+				"message": "unable read credentials",
+				"error":   err,
+			}},
+		)
 		return nil, err
 	}
 
 	srv, err := calendar.NewService(ctx, option.WithCredentials(credentials))
 	if err != nil {
-		logger.Error("unable authenticate to Calendar API", zap.Error(err))
+		logger.Log(logging.Entry{
+			Severity: logging.Error,
+			Payload: map[string]interface{}{
+				"message": "unable authenticate to Calendar API",
+				"error":   err,
+			}},
+		)
 		return nil, err
 	}
 

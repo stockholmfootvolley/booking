@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"cloud.google.com/go/logging"
 	"github.com/gin-gonic/gin"
 	"github.com/stockholmfootvolley/booking/internal/pkg/calendar"
 	"github.com/stockholmfootvolley/booking/internal/pkg/model"
@@ -13,8 +14,6 @@ import (
 	"github.com/stockholmfootvolley/booking/internal/pkg/spreadsheet"
 	"github.com/stripe/stripe-go"
 	"github.com/stripe/stripe-go/webhook"
-
-	"go.uber.org/zap"
 )
 
 type PaymentLink struct {
@@ -24,7 +23,13 @@ type PaymentLink struct {
 func (s *Server) webhook(c *gin.Context) {
 	payload, err := ioutil.ReadAll(c.Request.Body)
 	if err != nil {
-		s.logger.Error("Error reading request body: %v\n", zap.Error(err))
+		s.logger.Log(logging.Entry{
+			Severity: logging.Error,
+			Payload: map[string]interface{}{
+				"message": "Error reading request body: %v\n",
+				"error":   err,
+			}},
+		)
 		c.AbortWithStatus(http.StatusServiceUnavailable)
 		return
 	}
@@ -35,16 +40,27 @@ func (s *Server) webhook(c *gin.Context) {
 		s.webhookKey)
 
 	if err != nil {
-		s.logger.Error("could not parse webhook",
-			zap.Any("payload", string(payload)),
-			zap.String("header", c.Request.Header.Get("Stripe-Signature")))
+		s.logger.Log(logging.Entry{
+			Severity: logging.Error,
+			Payload: map[string]interface{}{
+				"message": "could not parse webhook",
+				"header":  c.Request.Header.Get("Stripe-Signature"),
+				"error":   err,
+			}},
+		)
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
 
 	checkoutSession := stripe.CheckoutSession{}
 	if checkoutSession.UnmarshalJSON(event.Data.Raw) != nil {
-		s.logger.Error("could not parse webhook", zap.Error(err))
+		s.logger.Log(logging.Entry{
+			Severity: logging.Error,
+			Payload: map[string]interface{}{
+				"message": "could not parse webhook",
+				"error":   err,
+			}},
+		)
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
@@ -55,7 +71,14 @@ func (s *Server) webhook(c *gin.Context) {
 
 	user, err := s.spreadsheetService.GetUser(userEmail)
 	if err != nil {
-		s.logger.Error("could not found user on metadata", zap.String("user", user.Email))
+		s.logger.Log(logging.Entry{
+			Severity: logging.Error,
+			Payload: map[string]interface{}{
+				"message": "could not found user on metadata",
+				"user":    user.Email,
+				"error":   err,
+			}},
+		)
 		c.AbortWithStatus(http.StatusNotFound)
 		return
 	}
@@ -69,7 +92,14 @@ func (s *Server) webhook(c *gin.Context) {
 		PaymentReceipt: checkoutSession.ID,
 	}, user)
 	if err != nil {
-		s.logger.Error("could not update event", zap.Error(err))
+		s.logger.Log(logging.Entry{
+			Severity: logging.Error,
+			Payload: map[string]interface{}{
+				"message": "could not update event",
+				"user":    user.Email,
+				"error":   err,
+			}},
+		)
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
