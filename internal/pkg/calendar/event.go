@@ -50,6 +50,13 @@ type Event struct {
 func GoogleEventToEvent(gEvent *calendar.Event, logger *logging.Logger) (*Event, error) {
 	description, err := readDescription(gEvent.Description)
 	if err != nil {
+		logger.Log(logging.Entry{
+			Severity: logging.Error,
+			Payload: map[string]interface{}{
+				"message": "could not read description",
+				"event":   err,
+			}},
+		)
 		return nil, err
 	}
 
@@ -183,6 +190,13 @@ func (c *Client) GetSingleEvent(ctx context.Context, eventDate string, userInfo 
 
 	description, err := readDescription(oldEvent.Description)
 	if err != nil {
+		c.Logger.Log(logging.Entry{
+			Severity: logging.Error,
+			Payload: map[string]interface{}{
+				"message": "could not read description",
+				"event":   err,
+			}},
+		)
 		return nil, nil, err
 	}
 
