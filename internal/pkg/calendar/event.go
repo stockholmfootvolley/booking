@@ -47,7 +47,7 @@ type Event struct {
 	MaxParticipants int        `json:"max_participants"`
 }
 
-func GoogleEventToEvent(gEvent *calendar.Event) (*Event, error) {
+func GoogleEventToEvent(gEvent *calendar.Event, logger *logging.Logger) (*Event, error) {
 	description, err := readDescription(gEvent.Description)
 	if err != nil {
 		return nil, err
@@ -123,7 +123,7 @@ func (c *Client) GetEvents(ctx context.Context) ([]*Event, error) {
 	retEvents := []*Event{}
 	for _, ev := range events.Items {
 
-		e, err := GoogleEventToEvent(ev)
+		e, err := GoogleEventToEvent(ev, c.Logger)
 
 		if userInfo.Level < model.StringToLevel(e.Level) {
 			continue
@@ -140,6 +140,13 @@ func (c *Client) GetEvents(ctx context.Context) ([]*Event, error) {
 func (c *Client) GetEvent(ctx context.Context, date string) (*calendar.Event, error) {
 	dateParsed, err := time.Parse(model.DateLayout, date)
 	if err != nil {
+		c.Logger.Log(logging.Entry{
+			Severity: logging.Error,
+			Payload: map[string]interface{}{
+				"message": "could not parse time",
+				"error":   err,
+			}},
+		)
 		return nil, err
 	}
 
@@ -151,6 +158,13 @@ func (c *Client) GetEvent(ctx context.Context, date string) (*calendar.Event, er
 		MaxResults(10).
 		Do()
 	if err != nil {
+		c.Logger.Log(logging.Entry{
+			Severity: logging.Error,
+			Payload: map[string]interface{}{
+				"message": "could not list events from google",
+				"error":   err,
+			}},
+		)
 		return nil, err
 	}
 
@@ -204,7 +218,7 @@ func (c *Client) AddAttendeeEvent(ctx context.Context, eventDate string, payment
 
 	for index := range description.Attendees {
 		if description.Attendees[index].Name == userInfo.Name && description.Attendees[index].Email == userInfo.Email {
-			return GoogleEventToEvent(oldEvent)
+			return GoogleEventToEvent(oldEvent, c.Logger)
 		}
 	}
 	description.Attendees = append(description.Attendees, Attendee{
@@ -231,7 +245,7 @@ func (c *Client) AddAttendeeEvent(ctx context.Context, eventDate string, payment
 
 		return nil, err
 	}
-	return GoogleEventToEvent(newEvent)
+	return GoogleEventToEvent(newEvent, c.Logger)
 }
 
 func (c *Client) RemoveAttendee(ctx context.Context, eventDate string, userInfo *spreadsheet.User) (*Event, error) {
@@ -273,7 +287,7 @@ func (c *Client) RemoveAttendee(ctx context.Context, eventDate string, userInfo 
 		)
 		return nil, err
 	}
-	return GoogleEventToEvent(newEvent)
+	return GoogleEventToEvent(newEvent, c.Logger)
 }
 
 func (p Payments) HasUserPaid(email string) bool {

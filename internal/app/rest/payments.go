@@ -9,9 +9,7 @@ import (
 	"cloud.google.com/go/logging"
 	"github.com/gin-gonic/gin"
 	"github.com/stockholmfootvolley/booking/internal/pkg/calendar"
-	"github.com/stockholmfootvolley/booking/internal/pkg/model"
 	"github.com/stockholmfootvolley/booking/internal/pkg/payment"
-	"github.com/stockholmfootvolley/booking/internal/pkg/spreadsheet"
 	"github.com/stripe/stripe-go"
 	"github.com/stripe/stripe-go/webhook"
 )
@@ -109,14 +107,14 @@ func (s *Server) webhook(c *gin.Context) {
 
 func (s *Server) getPaymentLink(c *gin.Context) (*PaymentLink, error) {
 	eventDate := c.Param("date")
-	userInfo := c.Value(model.User).(spreadsheet.User)
+	userInfo := s.GetUserFromContext(c)
 
 	event, _, err := s.calendarService.GetSingleEvent(c, eventDate, &userInfo)
 	if err != nil {
 		return nil, errors.New("could not found event for date " + eventDate)
 	}
 
-	newEvent, err := calendar.GoogleEventToEvent(event)
+	newEvent, err := calendar.GoogleEventToEvent(event, s.logger)
 	if err != nil {
 		return nil, errors.New("getPayment: could not convert event " + eventDate)
 	}
