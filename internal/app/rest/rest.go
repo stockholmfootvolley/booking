@@ -166,6 +166,8 @@ func (s *Server) Serve() {
 	router.Use(s.addParsedToken())
 
 	// and endpoints
+	router.GET("/user", s.getUser)
+
 	router.GET("/events", s.getEvents)
 	router.GET("/event/:date", s.getEvent)
 	router.POST("/event/:date", s.addPresence)
