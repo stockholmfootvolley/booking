@@ -19,9 +19,9 @@ type Client struct {
 }
 
 type User struct {
-	Name  string
-	Email string
-	Level model.Level
+	Name  string      `json:"name"`
+	Email string      `json:"email"`
+	Level model.Level `json:"level"`
 }
 
 type API interface {
