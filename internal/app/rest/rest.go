@@ -13,8 +13,6 @@ import (
 	"github.com/stockholmfootvolley/booking/internal/pkg/model"
 	"github.com/stockholmfootvolley/booking/internal/pkg/payment"
 	"github.com/stockholmfootvolley/booking/internal/pkg/spreadsheet"
-
-	"google.golang.org/api/idtoken"
 )
 
 const (
@@ -192,7 +190,7 @@ func (s *Server) addParsedToken() gin.HandlerFunc {
 		}
 
 		token = strings.ReplaceAll(token, "Bearer ", "")
-		payload, err := idtoken.Validate(c, token, s.clientID)
+		payload, err := s.ValidateToken(c, token)
 		if err != nil {
 			c.AbortWithStatus(http.StatusUnauthorized)
 			return
@@ -205,10 +203,9 @@ func (s *Server) addParsedToken() gin.HandlerFunc {
 		}
 
 		for _, user := range users {
-			userEmail := getTokenEmail(payload)
-			if strings.EqualFold(user.Email, userEmail) {
-				user.Name = getTokenName(payload)
-				user.Email = userEmail
+			if strings.EqualFold(user.Email, payload.Email) {
+				user.Name = payload.Name
+				user.Email = payload.Email
 				c.Set(model.User, user)
 				c.Next()
 				return
@@ -217,14 +214,6 @@ func (s *Server) addParsedToken() gin.HandlerFunc {
 
 		c.AbortWithError(http.StatusUnauthorized, errors.New("not a member"))
 	}
-}
-
-func getTokenName(payload *idtoken.Payload) string {
-	return payload.Claims["name"].(string)
-}
-
-func getTokenEmail(payload *idtoken.Payload) string {
-	return payload.Claims["email"].(string)
 }
 
 func (s *Server) GetUserFromContext(ctx context.Context) spreadsheet.User {
