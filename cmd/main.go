@@ -9,20 +9,16 @@ import (
 	"github.com/caarlos0/env"
 	"github.com/stockholmfootvolley/booking/internal/app/rest"
 	"github.com/stockholmfootvolley/booking/internal/pkg/calendar"
-	"github.com/stockholmfootvolley/booking/internal/pkg/payment"
 	"github.com/stockholmfootvolley/booking/internal/pkg/spreadsheet"
 )
 
 type config struct {
-	ServiceAccount  string `env:"SERVICE_ACCOUNT,required"`
-	CalendarID      string `env:"CALENDAR_ID,required"`
-	SpreadsheetID   string `env:"SPREADSHEET_ID,required"`
-	ClientID        string `env:"CLIENT_ID,required"`
-	Port            string `env:"PORT" envDefault:"8080"`
-	StripeKey       string `env:"STRIPE_KEY,required"`
-	ProductID       string `env:"PRODUCT_ID,required"`
-	StripeWebookKey string `env:"STRIPE_WEBHOOK_KEY,required"`
-	ProjectID       string `env:"PROJECT_ID,required"`
+	ServiceAccount string `env:"SERVICE_ACCOUNT,required"`
+	CalendarID     string `env:"CALENDAR_ID,required"`
+	SpreadsheetID  string `env:"SPREADSHEET_ID,required"`
+	ClientID       string `env:"CLIENT_ID,required"`
+	Port           string `env:"PORT" envDefault:"8080"`
+	ProjectID      string `env:"PROJECT_ID,required"`
 }
 
 func main() {
@@ -60,15 +56,11 @@ func main() {
 		log.Fatalf("could not start spreadsheet service")
 	}
 
-	paymentService := payment.New(cfg.StripeKey, cfg.ProductID, logger)
-
 	restService := rest.New(
 		calendarService,
 		spreadsheetService,
-		paymentService,
 		cfg.Port,
 		cfg.ClientID,
-		cfg.StripeWebookKey,
 		logger)
 	restService.Serve()
 }

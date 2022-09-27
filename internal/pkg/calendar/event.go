@@ -32,10 +32,10 @@ type Description struct {
 }
 
 type Payment struct {
-	Email          string `yaml:"email"`
-	Amount         int    `yaml:"amount"`
-	PaymentReceipt string `yaml:"receipt"`
+	Email         string    `yaml:"email"`
+	PaidTimestamp time.Time `yaml:"paid_timestamp"`
 }
+
 type Event struct {
 	ID              string     `json:"id"`
 	Price           int        `json:"price"`
@@ -69,7 +69,7 @@ func GoogleEventToEvent(gEvent *calendar.Event, logger *logging.Logger) (*Event,
 
 	return &Event{
 		ID:              model.TimeToID(gEvent.Start.DateTime),
-		Date:            model.TimeParse(gEvent.Start.DateTime),
+		Date:            *model.TimeParse(gEvent.Start.DateTime),
 		Name:            gEvent.Summary,
 		Attendees:       description.Attendees,
 		Price:           description.Price,
@@ -217,10 +217,6 @@ func (c *Client) AddAttendeeEvent(ctx context.Context, eventDate string, payment
 		return nil, errors.New("user has no compatible level")
 	}
 
-	if description.Price > 0 && payment == nil && !description.Payments.HasUserPaid(userInfo.Email) {
-		return nil, model.ErrRequiresPayment
-	}
-
 	c.Logger.Log(logging.Entry{
 		Severity: logging.Info,
 		Payload: map[string]interface{}{
@@ -289,7 +285,8 @@ func (c *Client) RemoveAttendee(ctx context.Context, eventDate string, userInfo 
 	}
 
 	oldEvent.Description = description.String()
-	newEvent, err := c.Service.Events.Update(c.CalendarID, oldEvent.Id, oldEvent).
+	newEvent, err := c.Service.Events.
+		Update(c.CalendarID, oldEvent.Id, oldEvent).
 		Do()
 	if err != nil {
 		c.Logger.Log(logging.Entry{

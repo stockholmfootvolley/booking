@@ -1,7 +1,6 @@
 package model
 
 import (
-	"errors"
 	"time"
 )
 
@@ -18,10 +17,6 @@ const (
 	Beginner Level = iota
 	Medium
 	Advanced
-)
-
-var (
-	ErrRequiresPayment error = errors.New("payment is required")
 )
 
 func (l Level) String() string {
@@ -54,7 +49,11 @@ func TimeToID(date string) string {
 	return TimeParse(date).Format("2006-01-02")
 }
 
-func TimeParse(date string) time.Time {
-	t, _ := time.Parse(time.RFC3339, date)
-	return t
+func TimeParse(date string) *time.Time {
+	t, err := time.Parse(time.RFC3339, date)
+
+	if err != nil {
+		return nil
+	}
+	return &t
 }

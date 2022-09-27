@@ -11,12 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stockholmfootvolley/booking/internal/pkg/calendar"
 	"github.com/stockholmfootvolley/booking/internal/pkg/model"
-	"github.com/stockholmfootvolley/booking/internal/pkg/payment"
 	"github.com/stockholmfootvolley/booking/internal/pkg/spreadsheet"
-)
-
-const (
-	WebhookPath string = "/stripe/webhook"
 )
 
 var (
@@ -27,11 +22,9 @@ var (
 type Server struct {
 	calendarService    calendar.API
 	spreadsheetService spreadsheet.API
-	paymentService     payment.API
 	port               string
 	logger             *logging.Logger
 	clientID           string
-	webhookKey         string
 }
 
 type API interface {
@@ -41,20 +34,15 @@ type API interface {
 func New(
 	calendarService calendar.API,
 	spreadsheetService spreadsheet.API,
-	paymentService payment.API,
-	port string,
-	clientID string,
-	webhookKey string,
+	port string, clientID string,
 	logger *logging.Logger) API {
 
 	return &Server{
 		calendarService:    calendarService,
 		spreadsheetService: spreadsheetService,
-		paymentService:     paymentService,
 		port:               port,
-		clientID:           clientID,
 		logger:             logger,
-		webhookKey:         webhookKey,
+		clientID:           clientID,
 	}
 }
 
@@ -112,22 +100,21 @@ func (s *Server) getEvent(c *gin.Context) {
 
 func (s *Server) addPresence(c *gin.Context) {
 	eventDate := c.Param("date")
+	paid := model.TimeParse(c.Param("paid"))
 
 	userInfo := s.GetUserFromContext(c)
-	newEvent, err := s.calendarService.AddAttendeeEvent(c, eventDate, nil, &userInfo)
-
-	if errors.Is(err, model.ErrRequiresPayment) {
-		link, err := s.getPaymentLink(c)
-		if err != nil {
-			c.AbortWithError(
-				http.StatusInternalServerError,
-				errors.New("addPresence: could not create payment link "+eventDate))
-			return
+	var payment *calendar.Payment
+	if paid != nil {
+		payment = &calendar.Payment{
+			Email:         userInfo.Email,
+			PaidTimestamp: *paid,
 		}
-
-		c.IndentedJSON(http.StatusTemporaryRedirect, link)
-		return
 	}
+
+	newEvent, err := s.calendarService.AddAttendeeEvent(c,
+		eventDate,
+		payment,
+		&userInfo)
 
 	if err != nil {
 		c.AbortWithError(
@@ -171,14 +158,12 @@ func (s *Server) Serve() {
 	router.POST("/event/:date", s.addPresence)
 	router.DELETE("/event/:date", s.removePresence)
 
-	// webhook
-	router.POST(WebhookPath, s.webhook)
 	router.Run("0.0.0.0:" + s.port)
 }
 
 func (s *Server) addParsedToken() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if c.Request.URL.Path == WebhookPath {
+		if c.Request.Method == http.MethodGet {
 			c.Next()
 			return
 		}
