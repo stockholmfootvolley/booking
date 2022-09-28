@@ -124,17 +124,10 @@ func (c *Client) GetEvents(ctx context.Context) ([]*Event, error) {
 		return nil, err
 	}
 
-	user := ctx.Value(model.User)
-	userInfo := user.(spreadsheet.User)
-
 	retEvents := []*Event{}
 	for _, ev := range events.Items {
 
 		e, err := GoogleEventToEvent(ev, c.Logger)
-
-		if userInfo.Level < model.StringToLevel(e.Level) {
-			continue
-		}
 
 		if err != nil {
 			return nil, err
@@ -198,10 +191,6 @@ func (c *Client) GetSingleEvent(ctx context.Context, eventDate string, userInfo 
 			}},
 		)
 		return nil, nil, err
-	}
-
-	if userInfo.Level < model.StringToLevel(description.Level) {
-		return nil, nil, errors.New("user has no compatible level")
 	}
 
 	return oldEvent, description, nil
