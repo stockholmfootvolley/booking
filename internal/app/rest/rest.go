@@ -100,7 +100,8 @@ func (s *Server) getEvent(c *gin.Context) {
 
 func (s *Server) addPresence(c *gin.Context) {
 	eventDate := c.Param("date")
-	paid := model.TimeParse(c.Param("paid"))
+
+	paid := model.TimeParse(c.Query("paid"))
 
 	userInfo := s.GetUserFromContext(c)
 	var payment *calendar.Payment
