@@ -112,7 +112,7 @@ func (s *Server) getPaymentLink(c *gin.Context) (*PaymentLink, error) {
 		return nil, errors.New("could not found event for date " + eventDate)
 	}
 
-	_, err = calendar.GoogleEventToEvent(event, s.logger)
+	_, err = s.calendarService.GoogleEventToEvent(event, s.logger)
 	if err != nil {
 		return nil, errors.New("getPayment: could not convert event " + eventDate)
 	}

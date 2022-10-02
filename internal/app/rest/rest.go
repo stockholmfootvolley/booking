@@ -81,7 +81,7 @@ func (s *Server) getEvent(c *gin.Context) {
 		return
 	}
 
-	newEvent, err := calendar.GoogleEventToEvent(event, s.logger)
+	newEvent, err := s.calendarService.GoogleEventToEvent(event, s.logger)
 	if err != nil {
 		s.logger.Log(logging.Entry{
 			Severity: logging.Error,
@@ -100,7 +100,6 @@ func (s *Server) getEvent(c *gin.Context) {
 
 func (s *Server) addPresence(c *gin.Context) {
 	eventDate := c.Param("date")
-
 	paid := model.TimeParse(c.Query("paid"))
 
 	userInfo := s.GetUserFromContext(c)

@@ -10,6 +10,7 @@ import (
 	"github.com/stockholmfootvolley/booking/internal/app/rest"
 	"github.com/stockholmfootvolley/booking/internal/pkg/calendar"
 	"github.com/stockholmfootvolley/booking/internal/pkg/spreadsheet"
+	"github.com/stockholmfootvolley/booking/internal/pkg/swish"
 )
 
 type config struct {
@@ -19,6 +20,7 @@ type config struct {
 	ClientID       string `env:"CLIENT_ID,required"`
 	Port           string `env:"PORT" envDefault:"8080"`
 	ProjectID      string `env:"PROJECT_ID,required"`
+	PhoneNumber    string `env:"PHONE_NUMBER" envDefault:"+46724675429"`
 }
 
 func main() {
@@ -46,7 +48,12 @@ func main() {
 		log.Fatalf("could not start logger")
 	}
 
-	calendarService, err := calendar.New(cfg.ServiceAccount, cfg.CalendarID, logger)
+	swish, err := swish.New(cfg.PhoneNumber, logger)
+	if err != nil {
+		log.Fatalf("could not swish logger")
+	}
+
+	calendarService, err := calendar.New(cfg.ServiceAccount, cfg.CalendarID, logger, swish)
 	if err != nil {
 		log.Fatalf("could not start calendar service")
 	}

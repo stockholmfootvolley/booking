@@ -5,6 +5,7 @@ import (
 
 	"cloud.google.com/go/logging"
 	"github.com/stockholmfootvolley/booking/internal/pkg/spreadsheet"
+	"github.com/stockholmfootvolley/booking/internal/pkg/swish"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/calendar/v3"
 	"google.golang.org/api/option"
@@ -14,6 +15,7 @@ type Client struct {
 	Service    *calendar.Service
 	CalendarID string
 	Logger     *logging.Logger
+	Swish      swish.API
 }
 
 type API interface {
@@ -22,9 +24,10 @@ type API interface {
 	AddAttendeeEvent(ctx context.Context, eventDate string, payment *Payment, userInfo *spreadsheet.User) (*Event, error)
 	RemoveAttendee(ctx context.Context, eventDate string, userInfo *spreadsheet.User) (*Event, error)
 	GetSingleEvent(ctx context.Context, eventDate string, userInfo *spreadsheet.User) (*calendar.Event, *Description, error)
+	GoogleEventToEvent(gEvent *calendar.Event, logger *logging.Logger) (*Event, error)
 }
 
-func New(serviceAccount string, calendarID string, logger *logging.Logger) (*Client, error) {
+func New(serviceAccount string, calendarID string, logger *logging.Logger, swishService swish.API) (*Client, error) {
 	service, err := getClient(serviceAccount, logger)
 	if err != nil {
 		logger.Log(logging.Entry{
@@ -41,6 +44,7 @@ func New(serviceAccount string, calendarID string, logger *logging.Logger) (*Cli
 		CalendarID: calendarID,
 		Service:    service,
 		Logger:     logger,
+		Swish:      swishService,
 	}, nil
 }
 
