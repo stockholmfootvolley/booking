@@ -17,9 +17,10 @@ import (
 )
 
 type Attendee struct {
-	Name     string    `json:"name" yaml:"name"`
-	Email    string    `json:"email" yaml:"email"`
-	SignTime time.Time `json:"sign_time" yaml:"sign_time"`
+	Name     string     `json:"name" yaml:"name"`
+	Email    string     `json:"email" yaml:"email"`
+	SignTime time.Time  `json:"sign_time" yaml:"sign_time"`
+	PaidTime *time.Time `json:"paid_time" yaml:"paid_time"`
 }
 
 type Payments []Payment
@@ -315,4 +316,38 @@ func (p Payments) HasUserPaid(email string) bool {
 		}
 	}
 	return false
+}
+
+func (c *Client) UpdateEvent(ctx context.Context, eventDate string, userInfo *spreadsheet.User) (*calendar.Event, *Description, error) {
+	oldEvent, description, err := c.GetSingleEvent(ctx, eventDate, userInfo)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	for index, attendee := range description.Attendees {
+		if attendee.Email == userInfo.Email {
+			if description.Attendees[index].PaidTime.IsZero() {
+				now := time.Now()
+				description.Attendees[index].PaidTime = &now
+			} else {
+				description.Attendees[index].PaidTime = nil
+			}
+
+			oldEvent.Description = description.String()
+			newEvent, err := c.Service.Events.Update(c.CalendarID, oldEvent.Id, oldEvent).Do()
+			if err != nil {
+				c.Logger.Log(logging.Entry{
+					Severity: logging.Error,
+					Payload: map[string]interface{}{
+						"message": "failed to update event",
+						"error":   err,
+					}},
+				)
+				return nil, nil, err
+			}
+			return newEvent, description, err
+		}
+	}
+
+	return nil, nil, errors.New("user not found")
 }

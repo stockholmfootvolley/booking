@@ -100,16 +100,9 @@ func (s *Server) getEvent(c *gin.Context) {
 
 func (s *Server) addPresence(c *gin.Context) {
 	eventDate := c.Param("date")
-	paid := model.TimeParse(c.Query("paid"))
 
 	userInfo := s.GetUserFromContext(c)
 	var payment *calendar.Payment
-	if paid != nil {
-		payment = &calendar.Payment{
-			Email:         userInfo.Email,
-			PaidTimestamp: *paid,
-		}
-	}
 
 	newEvent, err := s.calendarService.AddAttendeeEvent(c,
 		eventDate,
@@ -139,6 +132,24 @@ func (s *Server) removePresence(c *gin.Context) {
 	c.IndentedJSON(http.StatusAccepted, newEvent)
 }
 
+func (s *Server) changePayment(c *gin.Context) {
+	eventDate := c.Param("date")
+
+	userInfo := s.GetUserFromContext(c)
+
+	newEvent, _, err := s.calendarService.UpdateEvent(c,
+		eventDate,
+		&userInfo)
+
+	if err != nil {
+		c.AbortWithError(
+			http.StatusInternalServerError,
+			errors.New("addPresence: could not convert event "+eventDate))
+		return
+	}
+	c.IndentedJSON(http.StatusCreated, newEvent)
+}
+
 func (s *Server) Serve() {
 	router := gin.Default()
 
@@ -157,6 +168,7 @@ func (s *Server) Serve() {
 	router.GET("/event/:date", s.getEvent)
 	router.POST("/event/:date", s.addPresence)
 	router.DELETE("/event/:date", s.removePresence)
+	router.PUT("/event/:date", s.changePayment)
 
 	router.Run("0.0.0.0:" + s.port)
 }
