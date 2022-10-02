@@ -20,7 +20,7 @@ type config struct {
 	ClientID       string `env:"CLIENT_ID,required"`
 	Port           string `env:"PORT" envDefault:"8080"`
 	ProjectID      string `env:"PROJECT_ID,required"`
-	PhoneNumber    string `env:"PHONE_NUMBER" envDefault:"+46724675429"`
+	PhoneNumber    string `env:"PHONE_NUMBER" envDefault:"0724675429"`
 }
 
 func main() {
