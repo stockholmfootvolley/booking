@@ -47,7 +47,7 @@ func (c *Client) GenerateQrCode(amount int, eventLevel string, eventDate string)
 			"editable": false,
 		},
 		"message": map[string]interface{}{
-			"value":    fmt.Sprint(eventLevel, eventDate),
+			"value":    fmt.Sprint(eventLevel, " ", eventDate),
 			"editable": true,
 		},
 	}
