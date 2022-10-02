@@ -1,0 +1,4 @@
+curl 'http://localhost:8080/event/2022-10-04' \
+  -H 'accept: */*' \
+  -H 'accept-language: en-US,en;q=0.9,pt;q=0.8,sv;q=0.7' \
+  --compressed

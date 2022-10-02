@@ -2,6 +2,7 @@ package swish
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -38,7 +39,7 @@ func (c *Client) GenerateQrCode(amount int, eventLevel string, eventDate string)
 		"format": "png",
 		"size":   300,
 		"payee": map[string]interface{}{
-			"value":    "${PHONE}",
+			"value":    c.Phone,
 			"editable": false,
 		},
 		"amount": map[string]interface{}{
@@ -85,5 +86,5 @@ func (c *Client) GenerateQrCode(amount int, eventLevel string, eventDate string)
 		)
 	}
 
-	return string(response), err
+	return base64.StdEncoding.EncodeToString(response), err
 }
