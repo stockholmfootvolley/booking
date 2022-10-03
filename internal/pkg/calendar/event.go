@@ -49,10 +49,10 @@ type Event struct {
 	QrCode          string     `json:"qr_code"`
 }
 
-func (c *Client) GoogleEventToEvent(gEvent *calendar.Event, logger *logging.Logger) (*Event, error) {
+func (c *Client) GoogleEventToEvent(gEvent *calendar.Event) (*Event, error) {
 	description, err := readDescription(gEvent.Description)
 	if err != nil {
-		logger.Log(logging.Entry{
+		c.Logger.Log(logging.Entry{
 			Severity: logging.Error,
 			Payload: map[string]interface{}{
 				"message": "could not read description",
@@ -83,7 +83,7 @@ func (c *Client) GoogleEventToEvent(gEvent *calendar.Event, logger *logging.Logg
 	if description.Price > 0 {
 		qrcode, err := c.Swish.GenerateQrCode(description.Price, description.Level, model.TimeToID(gEvent.Start.DateTime))
 		if err != nil {
-			logger.Log(logging.Entry{
+			c.Logger.Log(logging.Entry{
 				Severity: logging.Error,
 				Payload: map[string]interface{}{
 					"message": "could not read description",
@@ -146,7 +146,7 @@ func (c *Client) GetEvents(ctx context.Context) ([]*Event, error) {
 	retEvents := []*Event{}
 	for _, ev := range events.Items {
 
-		e, err := c.GoogleEventToEvent(ev, c.Logger)
+		e, err := c.GoogleEventToEvent(ev)
 
 		if err != nil {
 			return nil, err
@@ -236,7 +236,7 @@ func (c *Client) AddAttendeeEvent(ctx context.Context, eventDate string, payment
 
 	for index := range description.Attendees {
 		if description.Attendees[index].Name == userInfo.Name && description.Attendees[index].Email == userInfo.Email {
-			return c.GoogleEventToEvent(oldEvent, c.Logger)
+			return c.GoogleEventToEvent(oldEvent)
 		}
 	}
 	description.Attendees = append(description.Attendees, Attendee{
@@ -263,7 +263,7 @@ func (c *Client) AddAttendeeEvent(ctx context.Context, eventDate string, payment
 
 		return nil, err
 	}
-	return c.GoogleEventToEvent(newEvent, c.Logger)
+	return c.GoogleEventToEvent(newEvent)
 }
 
 func (c *Client) RemoveAttendee(ctx context.Context, eventDate string, userInfo *spreadsheet.User) (*Event, error) {
@@ -306,7 +306,7 @@ func (c *Client) RemoveAttendee(ctx context.Context, eventDate string, userInfo 
 		)
 		return nil, err
 	}
-	return c.GoogleEventToEvent(newEvent, c.Logger)
+	return c.GoogleEventToEvent(newEvent)
 }
 
 func (p Payments) HasUserPaid(email string) bool {
@@ -318,10 +318,10 @@ func (p Payments) HasUserPaid(email string) bool {
 	return false
 }
 
-func (c *Client) UpdateEvent(ctx context.Context, eventDate string, userInfo *spreadsheet.User) (*calendar.Event, *Description, error) {
+func (c *Client) UpdateEvent(ctx context.Context, eventDate string, userInfo *spreadsheet.User) (*Event, error) {
 	oldEvent, description, err := c.GetSingleEvent(ctx, eventDate, userInfo)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	for index, attendee := range description.Attendees {
@@ -343,11 +343,11 @@ func (c *Client) UpdateEvent(ctx context.Context, eventDate string, userInfo *sp
 						"error":   err,
 					}},
 				)
-				return nil, nil, err
+				return nil, err
 			}
-			return newEvent, description, err
+			return c.GoogleEventToEvent(newEvent)
 		}
 	}
 
-	return nil, nil, errors.New("user not found")
+	return nil, errors.New("user not found")
 }

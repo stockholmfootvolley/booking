@@ -81,7 +81,7 @@ func (s *Server) getEvent(c *gin.Context) {
 		return
 	}
 
-	newEvent, err := s.calendarService.GoogleEventToEvent(event, s.logger)
+	newEvent, err := s.calendarService.GoogleEventToEvent(event)
 	if err != nil {
 		s.logger.Log(logging.Entry{
 			Severity: logging.Error,
@@ -137,7 +137,7 @@ func (s *Server) changePayment(c *gin.Context) {
 
 	userInfo := s.GetUserFromContext(c)
 
-	newEvent, _, err := s.calendarService.UpdateEvent(c,
+	_, description, err := s.calendarService.UpdateEvent(c,
 		eventDate,
 		&userInfo)
 
@@ -147,7 +147,7 @@ func (s *Server) changePayment(c *gin.Context) {
 			errors.New("addPresence: could not convert event "+eventDate))
 		return
 	}
-	c.IndentedJSON(http.StatusCreated, newEvent)
+	c.IndentedJSON(http.StatusCreated, description)
 }
 
 func (s *Server) Serve() {
