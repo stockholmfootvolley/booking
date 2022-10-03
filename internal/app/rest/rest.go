@@ -66,13 +66,13 @@ func (s *Server) getEvents(c *gin.Context) {
 func (s *Server) getEvent(c *gin.Context) {
 	eventDate := c.Param("date")
 	userInfo := s.GetUserFromContext(c)
-	event, _, err := s.calendarService.GetSingleEvent(c, eventDate, &userInfo)
+	event, _, err := s.calendarService.GetSingleEvent(c, eventDate, &userInfo.User)
 	if err != nil {
 		s.logger.Log(logging.Entry{
 			Severity: logging.Error,
 			Payload: map[string]interface{}{
 				"message": "could not retrieve event",
-				"user":    userInfo.Email,
+				"user":    userInfo.User.Email,
 			}},
 		)
 		c.AbortWithError(
@@ -87,7 +87,7 @@ func (s *Server) getEvent(c *gin.Context) {
 			Severity: logging.Error,
 			Payload: map[string]interface{}{
 				"message": "could not convert to google event",
-				"user":    userInfo.Email,
+				"user":    userInfo.User.Email,
 			}},
 		)
 		c.AbortWithError(
@@ -107,7 +107,7 @@ func (s *Server) addPresence(c *gin.Context) {
 	newEvent, err := s.calendarService.AddAttendeeEvent(c,
 		eventDate,
 		payment,
-		&userInfo)
+		&userInfo.User)
 
 	if err != nil {
 		c.AbortWithError(
@@ -121,7 +121,7 @@ func (s *Server) addPresence(c *gin.Context) {
 func (s *Server) removePresence(c *gin.Context) {
 	eventDate := c.Param("date")
 	userInfo := s.GetUserFromContext(c)
-	newEvent, err := s.calendarService.RemoveAttendee(c, eventDate, &userInfo)
+	newEvent, err := s.calendarService.RemoveAttendee(c, eventDate, &userInfo.User)
 
 	if err != nil {
 		c.AbortWithError(
@@ -139,7 +139,7 @@ func (s *Server) changePayment(c *gin.Context) {
 
 	event, err := s.calendarService.UpdateEvent(c,
 		eventDate,
-		&userInfo)
+		&userInfo.User)
 
 	if err != nil {
 		c.AbortWithError(
@@ -175,7 +175,7 @@ func (s *Server) Serve() {
 
 func (s *Server) addParsedToken() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if c.Request.Method == http.MethodGet {
+		if c.Request.URL.Path != "/user" && c.Request.Method == http.MethodGet {
 			c.Next()
 			return
 		}
@@ -203,7 +203,14 @@ func (s *Server) addParsedToken() gin.HandlerFunc {
 			if strings.EqualFold(user.Email, payload.Email) {
 				user.Name = payload.Name
 				user.Email = payload.Email
-				c.Set(model.User, user)
+				c.Set(model.User, UserInfo{
+					User: spreadsheet.User{
+						Name:  payload.Name,
+						Email: payload.Email,
+						Level: user.Level,
+					},
+					Picture: payload.Picture,
+				})
 				c.Next()
 				return
 			}
@@ -213,8 +220,8 @@ func (s *Server) addParsedToken() gin.HandlerFunc {
 	}
 }
 
-func (s *Server) GetUserFromContext(ctx context.Context) spreadsheet.User {
-	userInfo, ok := ctx.Value(model.User).(spreadsheet.User)
+func (s *Server) GetUserFromContext(ctx context.Context) UserInfo {
+	userInfo, ok := ctx.Value(model.User).(UserInfo)
 	if !ok {
 		s.logger.Log(logging.Entry{
 			Severity: logging.Error,

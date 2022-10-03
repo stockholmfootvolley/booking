@@ -41,8 +41,9 @@ func (s *Server) ValidateToken(ctx context.Context, token string) (*UserToken, e
 			return nil, err
 		}
 		return &UserToken{
-			Email: getTokenEmail(payload),
-			Name:  getTokenName(payload),
+			Email:   getTokenEmail(payload),
+			Name:    getTokenName(payload),
+			Picture: getTokenPicture(payload),
 		}, nil
 
 	} else {
@@ -88,4 +89,8 @@ func getTokenName(payload *idtoken.Payload) string {
 
 func getTokenEmail(payload *idtoken.Payload) string {
 	return payload.Claims["email"].(string)
+}
+
+func getTokenPicture(payload *idtoken.Payload) string {
+	return payload.Claims["picture"].(string)
 }

@@ -107,7 +107,7 @@ func (s *Server) getPaymentLink(c *gin.Context) (*PaymentLink, error) {
 	eventDate := c.Param("date")
 	userInfo := s.GetUserFromContext(c)
 
-	event, _, err := s.calendarService.GetSingleEvent(c, eventDate, &userInfo)
+	event, _, err := s.calendarService.GetSingleEvent(c, eventDate, &userInfo.User)
 	if err != nil {
 		return nil, errors.New("could not found event for date " + eventDate)
 	}
