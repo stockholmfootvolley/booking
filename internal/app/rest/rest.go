@@ -137,7 +137,7 @@ func (s *Server) changePayment(c *gin.Context) {
 
 	userInfo := s.GetUserFromContext(c)
 
-	_, description, err := s.calendarService.UpdateEvent(c,
+	event, err := s.calendarService.UpdateEvent(c,
 		eventDate,
 		&userInfo)
 
@@ -147,7 +147,7 @@ func (s *Server) changePayment(c *gin.Context) {
 			errors.New("addPresence: could not convert event "+eventDate))
 		return
 	}
-	c.IndentedJSON(http.StatusCreated, description)
+	c.IndentedJSON(http.StatusCreated, event)
 }
 
 func (s *Server) Serve() {
