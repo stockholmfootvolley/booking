@@ -326,7 +326,7 @@ func (c *Client) UpdateEvent(ctx context.Context, eventDate string, userInfo *sp
 
 	for index, attendee := range description.Attendees {
 		if attendee.Email == userInfo.Email {
-			if description.Attendees[index].PaidTime.IsZero() {
+			if description.Attendees[index].PaidTime == nil {
 				now := time.Now()
 				description.Attendees[index].PaidTime = &now
 			} else {

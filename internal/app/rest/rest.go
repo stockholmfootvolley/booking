@@ -165,10 +165,10 @@ func (s *Server) Serve() {
 	router.GET("/user", s.getUser)
 
 	router.GET("/events", s.getEvents)
+	router.PUT("/event/:date", s.changePayment)
 	router.GET("/event/:date", s.getEvent)
 	router.POST("/event/:date", s.addPresence)
 	router.DELETE("/event/:date", s.removePresence)
-	router.PUT("/event/:date", s.changePayment)
 
 	router.Run("0.0.0.0:" + s.port)
 }
