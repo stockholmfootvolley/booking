@@ -8,8 +8,8 @@ import (
 )
 
 type UserInfo struct {
-	User    spreadsheet.User
-	Picture string `json:"picture"`
+	User    spreadsheet.User `json:"user"`
+	Picture string           `json:"picture"`
 }
 
 func (s *Server) getUser(c *gin.Context) {
