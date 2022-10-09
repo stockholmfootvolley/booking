@@ -23,5 +23,5 @@ func (s *Server) getUser(c *gin.Context) {
 	}
 
 	maxAge := time.Now().Add(time.Hour)
-	c.SetCookie("user", string(jsonContent), int(maxAge.Unix()), "", "", true, false)
+	c.SetCookie("user", string(jsonContent), int(maxAge.Unix()), "/", c.Request.Host, true, false)
 }
