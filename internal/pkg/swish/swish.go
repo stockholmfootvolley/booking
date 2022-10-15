@@ -50,6 +50,7 @@ func (c *Client) GenerateQrCode(amount int, eventLevel string, eventDate string)
 			"value":    fmt.Sprint(eventLevel, " ", eventDate),
 			"editable": true,
 		},
+		"transparent": true,
 	}
 
 	result, err := json.Marshal(bodyJson)
