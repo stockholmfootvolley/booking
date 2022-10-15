@@ -34,8 +34,8 @@ type Description struct {
 }
 
 type Payment struct {
-	Email         string    `yaml:"email"`
-	PaidTimestamp time.Time `yaml:"paid_timestamp"`
+	Email         string    `json:"email" yaml:"email"`
+	PaidTimestamp time.Time `json:"paid_timestamp" yaml:"paid_timestamp"`
 }
 
 type Event struct {
@@ -44,6 +44,7 @@ type Event struct {
 	Name            string     `json:"name"`
 	Date            time.Time  `json:"date"`
 	Attendees       []Attendee `json:"attendees"`
+	Payments        Payments   `json:"payments"`
 	Local           string     `json:"local"`
 	Level           string     `json:"level"`
 	MaxParticipants int        `json:"max_participants"`
@@ -79,6 +80,7 @@ func (c *Client) GoogleEventToEvent(gEvent *calendar.Event) (*Event, error) {
 		Local:           gEvent.Location,
 		Level:           level.String(),
 		MaxParticipants: maxParticipants,
+		Payments:        description.Payments,
 	}
 
 	if description.Price > 0 {
