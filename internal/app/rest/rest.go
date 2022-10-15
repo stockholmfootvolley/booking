@@ -142,8 +142,13 @@ func (s *Server) changePayment(c *gin.Context) {
 		&userInfo.User)
 
 	if err != nil {
+		statusCode := http.StatusInternalServerError
+		if err == calendar.ErrCannotRemovePayment {
+			statusCode = http.StatusExpectationFailed
+		}
+
 		c.AbortWithError(
-			http.StatusInternalServerError,
+			statusCode,
 			errors.New("addPresence: could not convert event "+eventDate))
 		return
 	}

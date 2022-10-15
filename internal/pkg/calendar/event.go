@@ -16,11 +16,12 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+var ErrCannotRemovePayment = errors.New("cannot remove payment 2 days prior to event")
+
 type Attendee struct {
-	Name     string     `json:"name" yaml:"name"`
-	Email    string     `json:"email" yaml:"email"`
-	SignTime time.Time  `json:"sign_time" yaml:"sign_time"`
-	PaidTime *time.Time `json:"paid_time" yaml:"paid_time"`
+	Name     string    `json:"name" yaml:"name"`
+	Email    string    `json:"email" yaml:"email"`
+	SignTime time.Time `json:"sign_time" yaml:"sign_time"`
 }
 
 type Payments []Payment
@@ -324,30 +325,60 @@ func (c *Client) UpdateEvent(ctx context.Context, eventDate string, userInfo *sp
 		return nil, err
 	}
 
-	for index, attendee := range description.Attendees {
-		if attendee.Email == userInfo.Email {
-			if description.Attendees[index].PaidTime == nil {
-				now := time.Now()
-				description.Attendees[index].PaidTime = &now
-			} else {
-				description.Attendees[index].PaidTime = nil
-			}
+	index, hasPayment := description.UserHasPayment(userInfo.Email)
 
-			oldEvent.Description = description.String()
-			newEvent, err := c.Service.Events.Update(c.CalendarID, oldEvent.Id, oldEvent).Do()
-			if err != nil {
-				c.Logger.Log(logging.Entry{
-					Severity: logging.Error,
-					Payload: map[string]interface{}{
-						"message": "failed to update event",
-						"error":   err,
-					}},
-				)
-				return nil, err
-			}
-			return c.GoogleEventToEvent(newEvent)
+	if !hasPayment {
+		description.Payments = append(description.Payments, Payment{
+			Email:         userInfo.Email,
+			PaidTimestamp: time.Now(),
+		})
+	} else {
+		eventDate, err := time.Parse("2006-01-02", eventDate)
+		if err != nil {
+			c.Logger.Log(logging.Entry{
+				Severity: logging.Error,
+				Payload: map[string]interface{}{
+					"message": "failed to update event",
+					"error":   err,
+				}},
+			)
+			return nil, err
 		}
+
+		// cannot remove payment 2 days before the event
+		if time.Now().Add(time.Hour * 48).After(eventDate) {
+			c.Logger.Log(logging.Entry{
+				Severity: logging.Error,
+				Payload: map[string]interface{}{
+					"message": "failed to update event",
+					"error":   ErrCannotRemovePayment,
+				}},
+			)
+			return nil, ErrCannotRemovePayment
+		}
+		description.Payments = append(description.Payments[:index], description.Payments[index+1:]...)
 	}
 
-	return nil, errors.New("user not found")
+	oldEvent.Description = description.String()
+	newEvent, err := c.Service.Events.Update(c.CalendarID, oldEvent.Id, oldEvent).Do()
+	if err != nil {
+		c.Logger.Log(logging.Entry{
+			Severity: logging.Error,
+			Payload: map[string]interface{}{
+				"message": "failed to update event",
+				"error":   err,
+			}},
+		)
+		return nil, err
+	}
+	return c.GoogleEventToEvent(newEvent)
+}
+
+func (d *Description) UserHasPayment(email string) (int, bool) {
+	for index, payment := range d.Payments {
+		if strings.EqualFold(email, payment.Email) {
+			return index, true
+		}
+	}
+	return -1, false
 }
